@@ -68,9 +68,9 @@ nanodocs offers three ways to specify the files you want to bundle:
 |   - `letter`: Use letters (a., b., etc.)
 |   - `roman`: Use roman numerals (i., ii., etc.)
 | - `--header-style`: Change how filenames are displayed
-|   - `filename` (default): Just the filename
+|   - `filename`: Just the filename
 |   - `path`: Full file path
-|   - `nice`: Formatted title (removes extension, replaces - and _ with spaces, title case, adds original filename in parentheses)
+|   - `nice` (default): Formatted title (removes extension, replaces - and _ with spaces, title case, adds original filename in parentheses)
 - `-h, --help`: Show this help message
 
 Between files, a separator line is inserted with the format:
@@ -90,7 +90,7 @@ nanodocs --toc -v                            # Verbose bundle with TOC
 nanodocs some_directory                      # Add all files in directory
 | nanodocs --no-header file1.txt file2.txt     # Hide headers
 | nanodocs --header-seq=roman file1.txt        # Use roman numerals (i., ii., etc.)
-| nanodocs --header-style=nice file1.txt       # Use nice formatting (Title Case (filename.txt))
+| nanodocs --header-style=filename file1.txt   # Use filename style instead of nice (default)
 nanodocs  bundle_file                         # bundle_file is a txt docuument with files paths on lines
 ```
 

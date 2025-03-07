@@ -1,13 +1,13 @@
-Headers separate files in the bundled document. By default, they show the filename.
+Headers separate files in the bundled document. By default, they use the "nice" style.
 
 OPTIONS:
 --no-header             Hide headers completely
 --header-seq=TYPE       Add sequence numbers (numerical, letter, roman)
---header-style=STYLE    Change format (filename, path, nice)
+--header-style=STYLE    Change format (nice [default], filename, path)
 
 EXAMPLES:
-"file.txt"              Default style (filename)
+"File (file.txt)"       Default style (nice: titled with original in parentheses)
+"file.txt"              Filename style
 "/path/to/file.txt"     Path style (full path)
-"File (file.txt)"       Nice style (titled with original in parentheses)
 "1. file.txt"           With numerical sequence
 "a. File (file.txt)"    Combined letter sequence with nice style

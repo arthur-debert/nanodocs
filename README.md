@@ -68,7 +68,7 @@ Nanodoc is flexible in how you specify the files to bundle:
 - `--no-header`: Hide file headers completely
 - `--header-seq=TYPE`: Add sequence numbers to headers (numerical, letter, or
   roman)
-- `--header-style=STYLE`: Change header style (filename, path, or nice)
+- `--header-style=STYLE`: Change header style (nice [default], filename, or path)
 - `-h, --help`: Display help information
 
 ## Example Output
@@ -101,9 +101,9 @@ With line numbering (-n):
 
 ### Header Styles
 
-Nanodoc offers several header style options:
+Nanodoc offers several header style options (with "nice" being the default):
 
-**Default (filename):**
+**Filename style:**
 
 ```text
 welcome.txt
@@ -119,7 +119,7 @@ This is the content of welcome.txt
 This is the content of welcome.txt
 ```
 
-**Nice style:**
+**Nice style (default):**
 
 ```text
 Welcome (welcome.txt)
@@ -130,6 +130,9 @@ This is the content of welcome.txt
 These styles can be combined with sequence numbering
 (--header-seq=numerical|letter|roman) to create headers like
 `i. Welcome (welcome.txt)`.
+
+The table of contents entries will use the same style as the headers, providing a
+consistent look throughout the document.
 
 ## Installation
 
