@@ -91,29 +91,36 @@ import logging
 VERSION = "0.1.0"
 LINE_WIDTH = 80
 
-def setup_logging(to_stderr=False):
+# Custom exception for bundle file errors
+class BundleError(Exception):
+    pass
+
+# Initialize logger at the module level - disabled by default
+logger = logging.getLogger("nanodoc")
+logger.setLevel(logging.CRITICAL)  # Start with logging disabled
+
+def setup_logging(to_stderr=False, enabled=False):
     """Configure logging based on requirements"""
     global logger
-    logger = logging.getLogger("nanodoc")
-    logger.setLevel(logging.INFO)
-    
-    # Remove any existing handlers
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-    
-    # Create handler to the appropriate stream
-    stream = sys.stderr if to_stderr else sys.stdout
-    handler = logging.StreamHandler(stream)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not logger.hasHandlers():  # Only set up logging once
+        # Set initial log level
+        level = logging.DEBUG if enabled else logging.CRITICAL
+        logger.setLevel(level)
+        
+        # Create handler to the appropriate stream
+        stream = sys.stderr if to_stderr else sys.stdout
+        handler = logging.StreamHandler(stream)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    else:
+        # If handlers are already set, just adjust the level
+        level = logging.DEBUG if enabled else logging.CRITICAL
+        logger.setLevel(level)
     return logger
 
-# Initialize logger at the module level
-logger = setup_logging()
-
 def create_header(text, char="#"):
-    logger.info(f"Entering create_header with text='{text}', char='{char}'")
+    logger.debug(f"Creating header with text='{text}', char='{char}'")
     padding = (LINE_WIDTH - len(text) - 2) // 2
     header = char * padding + " " + text + " " + char * padding
     # Adjust if the header is shorter than LINE_WIDTH due to odd padding
@@ -121,49 +128,58 @@ def create_header(text, char="#"):
     return header
 
 def expand_directory(directory, extensions=[".txt", ".md"]):
-    logger.info(f"Entering expand_directory with directory='{directory}', extensions='{extensions}'")
+    logger.debug(f"Expanding directory with directory='{directory}', extensions='{extensions}'")
     matches = []
     for root, _, filenames in os.walk(directory):
         for filename in filenames:
-            for ext in extensions:
-                if filename.endswith(ext):
-                    matches.append(os.path.join(root, filename))
-                    break  # Avoid matching multiple extensions
+            if any(filename.endswith(ext) for ext in extensions):
+                matches.append(os.path.join(root, filename))
     return sorted(matches)
 
 
 def verify_path(path):
-    logger.info(f"Entering verify_path with path='{path}'")
+    logger.debug(f"Verifying path: {path}")
     if not os.path.isfile(path):
-        print(f"Error: Path is not a file: {path}")
-        sys.exit(127)
+        raise FileNotFoundError(f"Error: Path is not a file: {path}")
     return path
 
 
 def expand_bundles(bundle_file):
-    logger.info(f"Entering expand_bundles with bundle_file='{bundle_file}'")
+    logger.debug(f"Expanding bundles from file: {bundle_file}")
     try:
         with open(bundle_file, "r") as f:
-            lines = [line.strip() for line in f]
+            lines = [line.strip() for line in f if line.strip()]  # Skip empty lines
     except FileNotFoundError:
-        print(f"Error: Bundle file not found: {bundle_file}")
-        sys.exit(127)
+        raise BundleError(f"Bundle file not found: {bundle_file}")
+    
+    expanded_files = []
+    for line in lines:
+        if not os.path.isfile(line):
+            logger.warning(f"File not found in bundle: {line}")  # Log the missing file
+        else:
+            expanded_files.append(line)
+    
+    if not expanded_files:
+        raise BundleError(f"No valid files found in bundle: {bundle_file}")
 
-    return lines
+    return expanded_files
 
 
 def get_source_files(source):
-    logger.info(f"Entering get_source_files with source='{source}'")
+    logger.debug(f"Getting source files for: {source}")
     if os.path.isdir(source):
-        files = expand_directory(source)
-        return sorted(files)
-    elif glob.glob(f"{source}.bundle*"):
-        return expand_bundles(source)
+        return sorted(expand_directory(source))
+    elif is_bundle_file(source):
+        try:
+            return expand_bundles(source)
+        except BundleError as e:
+            print(e)
+            sys.exit(1)
     else:
         return [source]
 
 def process_file(file_path, line_number_mode, line_counter):
-    logger.info(f"Entering process_file with file_path='{file_path}', line_number_mode='{line_number_mode}', line_counter={line_counter}")
+    logger.debug(f"Processing file: {file_path}, line_number_mode: {line_number_mode}, line_counter: {line_counter}")
     try:
         with open(file_path, "r") as f:
             lines = f.readlines()
@@ -174,16 +190,16 @@ def process_file(file_path, line_number_mode, line_counter):
     output = header
 
     for i, line in enumerate(lines):
+        line_number = ""
         if line_number_mode == "all":
-            output += f"{line_counter + i + 1:4d}: {line}"
+            line_number = f"{line_counter + i + 1:4d}: "
         elif line_number_mode == "file":
-            output += f"{i + 1:4d}: {line}"
-        else:
-            output += line
+            line_number = f"{i + 1:4d}: "
+        output += line_number + line
     return output, len(lines)
 
 def process_all(verified_sources, line_number_mode, generate_toc):
-    logger.info(f"Entering process_all with verified_sources='{verified_sources}', line_number_mode='{line_number_mode}', generate_toc={generate_toc}")
+    logger.debug(f"Processing all files, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}")
     output_buffer = ""
     line_counter = 0
 
@@ -252,7 +268,6 @@ def process_all(verified_sources, line_number_mode, generate_toc):
     if generate_toc:
         output_buffer = toc + output_buffer
 
-    print(f"Generate TOC: {generate_toc}")
     return output_buffer
 
 def is_bundle_file(file_path):
@@ -260,7 +275,7 @@ def is_bundle_file(file_path):
     Determine if a file is a bundle file by checking if its lines look like file paths.
     A file is considered a bundle if its first non-empty line points to an existing file.
     """
-    logger.info(f"Checking if {file_path} is a bundle file")
+    logger.debug(f"Checking if {file_path} is a bundle file")
     try:
         with open(file_path, 'r') as f:
             # Check the first few non-empty lines
@@ -271,32 +286,29 @@ def is_bundle_file(file_path):
                 # If this line exists as a file, assume it's a bundle file
                 if os.path.isfile(line):
                     return True
-                # If we have a line that doesn't look like a file path, it's not a bundle
-                return False
-            return False
-    except:
+                else:
+                    return False # Not a bundle file if a line is not a valid file
+            return False # Not a bundle file if none of the first 5 lines are valid files
+    except FileNotFoundError:
+        return False
+    except Exception as e:
+        logger.error(f"Error checking bundle file: {e}")
         return False
 
 def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
-    logger.info(f"Entering init with srcs='{srcs}', verbose={verbose}, line_number_mode='{line_number_mode}', generate_toc={generate_toc}")
-    
-    # Keep track of original source files provided as arguments
-    original_sources = set(srcs)
-    
-    expanded_sources = [f for source in srcs for f in get_source_files(source)]
+    logger.debug(f"Initializing with sources: {srcs}, verbose: {verbose}, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}")
     
     verified_sources = []
-    for source in expanded_sources:
-        if source != "help":
-            # Only treat files as bundles if they were directly provided as arguments
-            # and end with .txt extension AND the content looks like file paths
-            if source in original_sources and os.path.isfile(source) and source.endswith(".txt") and is_bundle_file(source):
-                # expand the bundle
-                bundle_files = expand_bundles(source)
-                for file in bundle_files:
-                    verified_sources.append(verify_path(file))
-            else:
-                verified_sources.append(verify_path(source))
+    for source in srcs:
+        try:
+            for file in get_source_files(source):
+                verified_sources.append(verify_path(file))
+        except FileNotFoundError as e:
+            print(e)
+            sys.exit(1)
+        except BundleError as e:
+            print(e)
+            sys.exit(1)
 
     if not verified_sources:
         return "Error: No valid source files found."
@@ -305,11 +317,13 @@ def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
     return output
 
 def to_stds(srcs, verbose=False, line_number_mode=None, generate_toc=False):
-    if verbose:
-        logger.setLevel(logging.DEBUG)
+    # Enable logging only when verbose is True
+    setup_logging(to_stderr=True, enabled=verbose)
+        
     result = init(srcs, verbose, line_number_mode, generate_toc)
-    if verbose:
-        print(result)
+    
+    # Always print the result to stdout
+    return result
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -340,7 +354,6 @@ if __name__ == "__main__":
 
     # Handle help command before any logging occurs
     if args.help == "help" or (len(sys.argv) == 2 and sys.argv[1] == "help"):
-        # Don't log anything for help output
         print(__doc__)
         sys.exit(0)
 
@@ -348,25 +361,20 @@ if __name__ == "__main__":
         parser.print_usage()
         sys.exit(0)
 
-    # Set up logging to stderr to avoid mixing with output content
-    logger = setup_logging(to_stderr=True)
-
-    if args.v:
-        logger.setLevel(logging.DEBUG)
-    
     line_number_mode = None
     if args.n == 1:
         line_number_mode = "file"
     elif args.n >= 2:
         line_number_mode = "all"
 
-    expanded_sources = []
-    for source in args.sources:
-        expanded_sources.extend(get_source_files(source))
-
-    to_stds(
-        srcs=args.sources,
-        verbose=args.v,
-        line_number_mode=line_number_mode,
-        generate_toc=args.toc,
-    )
+    try:
+        output = to_stds(
+            srcs=args.sources,
+            verbose=args.v,
+            line_number_mode=line_number_mode,
+            generate_toc=args.toc,
+        )
+        print(output)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
