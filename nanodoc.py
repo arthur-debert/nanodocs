@@ -2,10 +2,20 @@ import argparse
 import os
 import glob
 import sys
+import logging
 
 LINE_WIDTH = 80
 
+logger = logging.getLogger("nanodoc")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+
 def create_header(text, char="#"):
+    logger.info(f"Entering create_header with text='{text}', char='{char}'")
     padding = (LINE_WIDTH - len(text) - 2) // 2
     header = char * padding + " " + text + " " + char * padding
     # Adjust if the header is shorter than LINE_WIDTH due to odd padding
@@ -13,6 +23,7 @@ def create_header(text, char="#"):
     return header
 
 def expand_directory(directory, extensions=[".txt", ".md"]):
+    logger.info(f"Entering expand_directory with directory='{directory}', extensions='{extensions}'")
     matches = []
     for root, _, filenames in os.walk(directory):
         for filename in filenames:
@@ -24,6 +35,7 @@ def expand_directory(directory, extensions=[".txt", ".md"]):
 
 
 def verify_path(path):
+    logger.info(f"Entering verify_path with path='{path}'")
     if not os.path.isfile(path):
         print(f"Error: Path is not a file: {path}")
         sys.exit(127)
@@ -31,6 +43,7 @@ def verify_path(path):
 
 
 def expand_bundles(bundle_file):
+    logger.info(f"Entering expand_bundles with bundle_file='{bundle_file}'")
     try:
         with open(bundle_file, "r") as f:
             lines = [line.strip() for line in f]
@@ -42,6 +55,7 @@ def expand_bundles(bundle_file):
 
 
 def get_source_files(source):
+    logger.info(f"Entering get_source_files with source='{source}'")
     if os.path.isdir(source):
         return expand_directory(source)
     elif glob.glob(f"{source}.bundle*"):
@@ -50,6 +64,7 @@ def get_source_files(source):
         return [source]
 
 def process_file(file_path, line_number_mode, line_counter):
+    logger.info(f"Entering process_file with file_path='{file_path}', line_number_mode='{line_number_mode}', line_counter={line_counter}")
     try:
         with open(file_path, "r") as f:
             lines = f.readlines()
@@ -67,6 +82,7 @@ def process_file(file_path, line_number_mode, line_counter):
     return output, len(lines)
 
 def process_all(verified_sources, line_number_mode, generate_toc):
+    logger.info(f"Entering process_all with verified_sources='{verified_sources}', line_number_mode='{line_number_mode}', generate_toc={generate_toc}")
     output_buffer = ""
     line_counter = 0
 
@@ -91,15 +107,22 @@ def process_all(verified_sources, line_number_mode, generate_toc):
     return output_buffer
 
 def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
+    logger.info(f"Entering init with srcs='{srcs}', verbose={verbose}, line_number_mode='{line_number_mode}', generate_toc={generate_toc}")
     expanded_sources = [f for source in srcs for f in get_source_files(source)]
     verified_sources = [verify_path(source) for source in expanded_sources]
 
+    if not verified_sources:
+        return "Error: No valid source files found."
+
     output = process_all(verified_sources, line_number_mode, generate_toc)
+    return output
+
+def to_stds(srcs, verbose=False, line_number_mode=None, generate_toc=False):
     if verbose:
-        print(output)
-
-    print(f"Verbose: {verbose}")
-
+        logger.setLevel(logging.DEBUG)
+    result = init(srcs, verbose, line_number_mode, generate_toc)
+    if verbose:
+        print(result)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -127,7 +150,7 @@ if __name__ == "__main__":
     for source in args.sources:
         expanded_sources.extend(get_source_files(source))
 
-    init(
+    to_stds(
         srcs=args.sources,
         verbose=args.v,
         line_number_mode=line_number_mode,
