@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-""" "
+""" 
 # nanodocs
 
 nanodocs is an ultra-lightweight documentation generator. no frills: concat
@@ -118,6 +118,154 @@ class BundleError(Exception):
 logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
 
+################################################################################
+# Argument Expansion - Functions that turn arguments into a verified list of paths
+################################################################################
+
+def expand_directory(directory, extensions=[".txt", ".md"]):
+    """Find all files in a directory with specified extensions.
+
+    This function expands a directory path into a list of file paths.
+
+    Args:
+        directory (str): The directory path to search.
+        extensions (list): List of file extensions to include.
+
+    Returns:
+        list: A sorted list of file paths matching the extensions (not validated).
+    """
+    logger.debug(
+        f"Expanding directory with directory='{directory}', extensions='{extensions}'"
+    )
+    matches = []
+    for root, _, filenames in os.walk(directory):
+        for filename in filenames:
+            if any(filename.endswith(ext) for ext in extensions):
+                matches.append(os.path.join(root, filename))
+    return sorted(matches)
+
+
+def expand_bundles(bundle_file):
+    """Extract list of files from a bundle file.
+
+    This function expands a bundle file into a list of file paths.
+
+    Args:
+        bundle_file (str): Path to the bundle file.
+
+    Returns:
+        list: A list of file paths contained in the bundle (not validated).
+
+    Raises:
+        BundleError: If bundle file not found or contains no valid files.
+    """
+    logger.debug(f"Expanding bundles from file: {bundle_file}")
+    try:
+        with open(bundle_file, "r") as f:
+            lines = [line.strip() for line in f if line.strip()]  # Skip empty lines
+    except FileNotFoundError:
+        raise BundleError(f"Bundle file not found: {bundle_file}")
+
+    expanded_files = []
+    for line in [l for l in lines if l and not l.startswith('#')]:
+        expanded_files.append(line)
+    
+    # Note: validation is now done separately
+
+    return expanded_files
+
+
+def expand_args(args):
+    """Expand a list of arguments into a flattened list of file paths.
+
+    This function expands a list of arguments (file paths, directory paths, or bundle files)
+    into a flattened list of file paths by calling the appropriate expander for each argument.
+
+    Args:
+        args (list): A list of file paths, directory paths, or bundle files.
+
+    Returns:
+        list: A flattened list of file paths (not validated).
+    """
+    logger.debug(f"Expanding arguments: {args}")
+
+    def expand_single_arg(arg):
+        """Helper function to expand a single argument."""
+        logger.debug(f"Expanding argument: {arg}")
+        if os.path.isdir(arg):  # Directory path
+            return expand_directory(arg)
+        elif is_bundle_file(arg):  # Bundle file
+            return expand_bundles(arg)
+        else:
+            return [arg]  # Regular file path
+    
+    # Use list comprehension with sum to flatten the list of lists
+    return sum([expand_single_arg(arg) for arg in args], [])
+
+def verify_path(path):
+    """Verify that a given path exists, is readable, and is not a directory.
+
+    Args:
+        path (str): The file path to verify.
+
+    Returns:
+        str: The verified path.
+
+    Raises:
+        FileNotFoundError: If the path does not exist.
+        PermissionError: If the file is not readable.
+        IsADirectoryError: If the path is a directory.
+    """
+    logger.debug(f"Verifying file path: {path}")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Error: Path does not exist: {path}")
+    if not os.access(path, os.R_OK):
+        raise PermissionError(f"Error: File is not readable: {path}")
+    if os.path.isdir(path):
+        raise IsADirectoryError(f"Error: Path is a directory, not a file: {path}")
+    return path
+
+
+def is_bundle_file(file_path):
+    """Determine if a file is a bundle file by checking its contents.
+
+    A file is considered a bundle if its first non-empty, non-comment line
+    points to an existing file.
+
+    Args:
+        file_path (str): The path to the file to check.
+
+    Returns:
+        bool: True if the file appears to be a bundle file, False otherwise.
+    """
+    logger.debug(f"Checking if {file_path} is a bundle file")
+    try:
+        with open(file_path, "r") as f:
+            # Check the first few non-empty lines
+            for _ in range(5):  # Check up to 5 lines
+                line = f.readline().strip()
+                if not line:
+                    continue
+                if line.startswith("#"):  # Skip comment lines
+                    continue
+                # If this line exists as a file, assume it's a bundle file
+                if os.path.isfile(line):
+                    return True
+                else:
+                    return False  # Not a bundle file if a line is not a valid file
+            return (
+                False  # Not a bundle file if none of the first 5 lines are valid files
+            )
+    except FileNotFoundError:
+        return False
+    except Exception as e:
+        logger.error(f"Error checking bundle file: {e}")
+        return False
+
+
+################################################################################
+# Formatting - Functions related to headers, line numbers, and table of contents
+################################################################################
 
 def apply_style_to_filename(filename, style, original_path=None):
     """Apply the specified style to a filename.
@@ -213,37 +361,6 @@ def apply_sequence_to_text(text, sequence, seq_index):
     return prefix + text if prefix else text
 
 
-def setup_logging(to_stderr=False, enabled=False):
-    """Configure logging based on requirements.
-
-    Args:
-        to_stderr (bool): If True, logs to stderr instead of stdout.
-        enabled (bool): If True, sets logging level to DEBUG, otherwise CRITICAL.
-
-    Returns:
-        logger: Configured logging object.
-    """
-    global logger
-    if not logger.hasHandlers():  # Only set up logging once
-        # Set initial log level
-        level = logging.DEBUG if enabled else logging.CRITICAL
-        logger.setLevel(level)
-
-        # Create handler to the appropriate stream
-        stream = sys.stderr if to_stderr else sys.stdout
-        handler = logging.StreamHandler(stream)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    else:
-        # If handlers are already set, just adjust the level
-        level = logging.DEBUG if enabled else logging.CRITICAL
-        logger.setLevel(level)
-    return logger
-
-
 def create_header(
     text, char="#", sequence=None, seq_index=0, style=None, original_path=None
 ):
@@ -276,111 +393,91 @@ def create_header(
     return header
 
 
-def expand_directory(directory, extensions=[".txt", ".md"]):
-    """Find all files in a directory with specified extensions.
+################################################################################
+# Sys - System-level functions for logging and output
+################################################################################
 
-    This function expands a directory path into a list of file paths.
+def setup_logging(to_stderr=False, enabled=False):
+    """Configure logging based on requirements.
 
     Args:
-        directory (str): The directory path to search.
-        extensions (list): List of file extensions to include.
+        to_stderr (bool): If True, logs to stderr instead of stdout.
+        enabled (bool): If True, sets logging level to DEBUG, otherwise CRITICAL.
 
     Returns:
-        list: A sorted list of file paths matching the extensions (not validated).
+        logger: Configured logging object.
     """
-    logger.debug(
-        f"Expanding directory with directory='{directory}', extensions='{extensions}'"
-    )
-    matches = []
-    for root, _, filenames in os.walk(directory):
-        for filename in filenames:
-            if any(filename.endswith(ext) for ext in extensions):
-                matches.append(os.path.join(root, filename))
-    return sorted(matches)
+    global logger
+    if not logger.hasHandlers():  # Only set up logging once
+        # Set initial log level
+        level = logging.DEBUG if enabled else logging.CRITICAL
+        logger.setLevel(level)
+
+        # Create handler to the appropriate stream
+        stream = sys.stderr if to_stderr else sys.stdout
+        handler = logging.StreamHandler(stream)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    else:
+        # If handlers are already set, just adjust the level
+        level = logging.DEBUG if enabled else logging.CRITICAL
+        logger.setLevel(level)
+    return logger
 
 
+def to_stds(
+    srcs,
+    verbose=False,
+    line_number_mode=None,
+    generate_toc=False,
+    show_header=True,
+    sequence=None,
+    style=None,
+):
+    """Process sources and return the result as a string.
 
-
-def expand_bundles(bundle_file):
-    """Extract list of files from a bundle file.
-
-    This function expands a bundle file into a list of file paths.
+    This function handles setting up logging and error handling.
 
     Args:
-        bundle_file (str): Path to the bundle file.
+        srcs (list): List of source file paths, directories, or bundle files.
+        verbose (bool): Whether to enable verbose logging.
+        line_number_mode (str): Line numbering mode ('file', 'all', or None).
+        generate_toc (bool): Whether to generate a table of contents.
+        show_header (bool): Whether to show headers.
+        sequence (str): The header sequence type (numerical, letter, roman, or None).
+        style (str): The header style (filename, path, nice, or None).
 
     Returns:
-        list: A list of file paths contained in the bundle (not validated).
+        str: The processed output.
 
     Raises:
-        BundleError: If bundle file not found or contains no valid files.
+        Exception: Any error encountered during processing.
     """
-    logger.debug(f"Expanding bundles from file: {bundle_file}")
+    # Enable logging only when verbose is True
+    setup_logging(to_stderr=True, enabled=verbose)
     try:
-        with open(bundle_file, "r") as f:
-            lines = [line.strip() for line in f if line.strip()]  # Skip empty lines
-    except FileNotFoundError:
-        raise BundleError(f"Bundle file not found: {bundle_file}")
+        result = init(
+            srcs,
+            verbose,
+            line_number_mode,
+            generate_toc,
+            show_header,
+            sequence,
+            style,
+        )
+    except Exception as e:
+        raise e
 
-    expanded_files = []
-    for line in [l for l in lines if l and not l.startswith('#')]:
-        expanded_files.append(line)
-    
-    # Note: validation is now done separately
-
-    return expanded_files
+    # Always print the result to stdout
+    return result
 
 
-def expand_args(args):
-    """Expand a list of arguments into a flattened list of file paths.
-
-    This function expands a list of arguments (file paths, directory paths, or bundle files)
-    into a flattened list of file paths by calling the appropriate expander for each argument.
-
-    Args:
-        args (list): A list of file paths, directory paths, or bundle files.
-
-    Returns:
-        list: A flattened list of file paths (not validated).
-    """
-    logger.debug(f"Expanding arguments: {args}")
-
-    def expand_single_arg(arg):
-        """Helper function to expand a single argument."""
-        logger.debug(f"Expanding argument: {arg}")
-        if os.path.isdir(arg):  # Directory path
-            return expand_directory(arg)
-        elif is_bundle_file(arg):  # Bundle file
-            return expand_bundles(arg)
-        else:
-            return [arg]  # Regular file path
-    
-    # Use list comprehension with sum to flatten the list of lists
-    return sum([expand_single_arg(arg) for arg in args], [])
-
-def verify_path(path):
-    """Verify that a given path exists, is readable, and is not a directory.
-
-    Args:
-        path (str): The file path to verify.
-
-    Returns:
-        str: The verified path.
-
-    Raises:
-        FileNotFoundError: If the path does not exist.
-        PermissionError: If the file is not readable.
-        IsADirectoryError: If the path is a directory.
-    """
-    logger.debug(f"Verifying file path: {path}")
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Error: Path does not exist: {path}")
-    if not os.access(path, os.R_OK):
-        raise PermissionError(f"Error: File is not readable: {path}")
-    if os.path.isdir(path):
-        raise IsADirectoryError(f"Error: Path is a directory, not a file: {path}")
-    return path
-
+################################################################################
+# Main Processing - Core processing functions
+################################################################################
 
 def process_file(
     file_path,
@@ -557,43 +654,6 @@ def process_all(
     return output_buffer
 
 
-def is_bundle_file(file_path):
-    """Determine if a file is a bundle file by checking its contents.
-
-    A file is considered a bundle if its first non-empty, non-comment line
-    points to an existing file.
-
-    Args:
-        file_path (str): The path to the file to check.
-
-    Returns:
-        bool: True if the file appears to be a bundle file, False otherwise.
-    """
-    logger.debug(f"Checking if {file_path} is a bundle file")
-    try:
-        with open(file_path, "r") as f:
-            # Check the first few non-empty lines
-            for _ in range(5):  # Check up to 5 lines
-                line = f.readline().strip()
-                if not line:
-                    continue
-                if line.startswith("#"):  # Skip comment lines
-                    continue
-                # If this line exists as a file, assume it's a bundle file
-                if os.path.isfile(line):
-                    return True
-                else:
-                    return False  # Not a bundle file if a line is not a valid file
-            return (
-                False  # Not a bundle file if none of the first 5 lines are valid files
-            )
-    except FileNotFoundError:
-        return False
-    except Exception as e:
-        logger.error(f"Error checking bundle file: {e}")
-        return False
-
-
 def init(
     srcs,
     verbose=False,
@@ -641,53 +701,6 @@ def init(
         style,
     )
     return output
-
-
-def to_stds(
-    srcs,
-    verbose=False,
-    line_number_mode=None,
-    generate_toc=False,
-    show_header=True,
-    sequence=None,
-    style=None,
-):
-    """Process sources and return the result as a string.
-
-    This function handles setting up logging and error handling.
-
-    Args:
-        srcs (list): List of source file paths, directories, or bundle files.
-        verbose (bool): Whether to enable verbose logging.
-        line_number_mode (str): Line numbering mode ('file', 'all', or None).
-        generate_toc (bool): Whether to generate a table of contents.
-        show_header (bool): Whether to show headers.
-        sequence (str): The header sequence type (numerical, letter, roman, or None).
-        style (str): The header style (filename, path, nice, or None).
-
-    Returns:
-        str: The processed output.
-
-    Raises:
-        Exception: Any error encountered during processing.
-    """
-    # Enable logging only when verbose is True
-    setup_logging(to_stderr=True, enabled=verbose)
-    try:
-        result = init(
-            srcs,
-            verbose,
-            line_number_mode,
-            generate_toc,
-            show_header,
-            sequence,
-            style,
-        )
-    except Exception as e:
-        raise e
-
-    # Always print the result to stdout
-    return result
 
 
 if __name__ == "__main__":

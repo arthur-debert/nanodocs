@@ -31,18 +31,18 @@ def test_expand_bundles_not_found(tmpdir):
         expand_bundles("non_existent_bundle.txt")
     assert "Bundle file not found" in str(excinfo.value)
 
-def test_verify_file_path_not_found():
+def test_verify_path_not_found():
     with pytest.raises(FileNotFoundError) as excinfo:
         verify_path("/nonexistent/file.txt")
     assert "Path does not exist" in str(excinfo.value)
 
-def test_verify_file_path_is_directory(tmpdir):
+def test_verify_path_is_directory(tmpdir):
     dir_path = tmpdir.mkdir("test_dir")
     with pytest.raises(IsADirectoryError) as excinfo:
         verify_path(str(dir_path))
     assert "Path is a directory" in str(excinfo.value)
 
-def test_verify_file_path_valid(tmpdir):
+def test_verify_path_valid(tmpdir):
     test_file = tmpdir.join("test_file.txt")
     test_file.write("Line 1")
     
