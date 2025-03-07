@@ -97,7 +97,6 @@ nanodocs  bundle_file                         # bundle_file is a txt docuument w
 """
 import argparse
 import os
-import glob
 import sys
 import logging
 
@@ -156,6 +155,41 @@ def apply_style_to_filename(filename, style, original_path=None):
     return filename
 
 
+def to_roman(num):
+    """Convert integer to roman numeral.
+    
+    Args:
+        num (int): A positive integer to convert.
+        
+    Returns:
+        str: Roman numeral representation of the input.
+    """
+    if not isinstance(num, int) or num <= 0:
+        raise ValueError("Input must be a positive integer")
+    
+    val = [
+        1000, 900, 500, 400,
+        100, 90, 50, 40,
+        10, 9, 5, 4,
+        1
+    ]
+    syms = [
+        "M", "CM", "D", "CD",
+        "C", "XC", "L", "XL",
+        "X", "IX", "V", "IV",
+        "I"
+    ]
+    
+    roman_num = ""
+    i = 0
+    while num > 0:
+        for _ in range(num // val[i]):
+            roman_num += syms[i]
+            num -= val[i]
+        i += 1
+    return roman_num.lower()
+
+
 def apply_sequence_to_text(text, sequence, seq_index):
     """Apply the specified sequence to text.
 
@@ -182,24 +216,7 @@ def apply_sequence_to_text(text, sequence, seq_index):
         prefix = f"{letter}. "
     elif sequence == "roman":
         # Roman numerals: i., ii., etc.
-        roman_numerals = [
-            "i",
-            "ii",
-            "iii",
-            "iv",
-            "v",
-            "vi",
-            "vii",
-            "viii",
-            "ix",
-            "x",
-            "xi",
-            "xii",
-            "xiii",
-            "xiv",
-            "xv",
-        ]
-        prefix = f"{roman_numerals[seq_index % len(roman_numerals)]}. "
+        prefix = f"{to_roman(seq_index + 1)}. "
     else:
         # If sequence is not recognized, return text as is
         return text
