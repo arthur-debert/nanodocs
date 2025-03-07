@@ -1,0 +1,17 @@
+Three ways to tell nanodoc which files to bundle:
+
+1. INDIVIDUAL FILES:
+   nanodoc file1.txt file2.txt file3.md
+   Processes exactly these files in the order provided.
+
+2. DIRECTORIES:
+   nanodoc docs/
+   Finds and processes all .txt and .md files in the directory and subdirectories.
+   Files processed in alphabetical order.
+
+3. BUNDLE FILES:
+   nanodoc mybundle.txt
+   Where mybundle.txt lists file paths, one per line:
+   chapter1.txt
+   images/diagram.md
+   /absolute/path/to/notes.txt

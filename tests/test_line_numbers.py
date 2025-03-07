@@ -38,5 +38,42 @@ def test_process_file_header_assignment(tmpdir):
     test_file.write("test")
     file_path = str(test_file)
     output, _ = process_file(file_path, None, 0)
-    header = create_header(os.path.basename(file_path)) + "\n"
+    header = "\n" + os.path.basename(file_path) + "\n\n"
     assert output.startswith(header)
+
+def test_process_file_with_no_header(tmpdir):
+    test_file = tmpdir.join("test_file.txt")
+    test_file.write("Line 1\nLine 2")
+    file_path = str(test_file)
+    output, _ = process_file(file_path, None, 0, show_header=False)
+    assert "Line 1" in output
+    assert "Line 2" in output
+    assert not output.startswith("\n")
+    assert not os.path.basename(file_path) in output.split("\n")[0]
+
+def test_process_file_with_header_sequence(tmpdir):
+    test_file = tmpdir.join("test_file.txt")
+    test_file.write("test")
+    file_path = str(test_file)
+    
+    # Test numerical sequence
+    output, _ = process_file(file_path, None, 0, header_seq="numerical", seq_index=0)
+    assert "\n1. test_file.txt\n\n" in output
+    
+    # Test letter sequence
+    output, _ = process_file(file_path, None, 0, header_seq="letter", seq_index=1)
+    assert "\nb. test_file.txt\n\n" in output
+    
+    # Test roman sequence
+    output, _ = process_file(file_path, None, 0, header_seq="roman", seq_index=2)
+    assert "\niii. test_file.txt\n\n" in output
+
+def test_process_file_with_header_style(tmpdir):
+    test_file = tmpdir.join("test_file.txt")
+    test_file.write("test")
+    file_path = str(test_file)
+    
+    # Test nice style with sequence
+    output, _ = process_file(file_path, None, 0, header_seq="numerical", seq_index=0, header_style="nice")
+    assert "\n1. Test File (test_file.txt)\n\n" in output
+

@@ -1,0 +1,8 @@
+This is a second test file.
+
+When using the --header-seq option, this file will be the second in the sequence.
+
+For example:
+- With --header-seq=numerical, this will be "2. test_headers2.txt"
+- With --header-seq=letter, this will be "b. test_headers2.txt"
+- With --header-seq=roman, this will be "ii. test_headers2.txt"
