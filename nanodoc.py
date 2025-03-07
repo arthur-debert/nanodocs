@@ -170,11 +170,7 @@ def get_source_files(source):
     if os.path.isdir(source):
         return sorted(expand_directory(source))
     elif is_bundle_file(source):
-        try:
-            return expand_bundles(source)
-        except BundleError as e:
-            print(e)
-            sys.exit(1)
+        return expand_bundles(source)
     else:
         return [source]
 
@@ -283,6 +279,8 @@ def is_bundle_file(file_path):
                 line = f.readline().strip()
                 if not line:
                     continue
+                if line.startswith("#"):  # Skip comment lines
+                    continue
                 # If this line exists as a file, assume it's a bundle file
                 if os.path.isfile(line):
                     return True
@@ -306,9 +304,6 @@ def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
         except FileNotFoundError as e:
             print(e)
             sys.exit(1)
-        except BundleError as e:
-            print(e)
-            sys.exit(1)
 
     if not verified_sources:
         return "Error: No valid source files found."
@@ -319,8 +314,10 @@ def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
 def to_stds(srcs, verbose=False, line_number_mode=None, generate_toc=False):
     # Enable logging only when verbose is True
     setup_logging(to_stderr=True, enabled=verbose)
-        
-    result = init(srcs, verbose, line_number_mode, generate_toc)
+    try:    
+        result = init(srcs, verbose, line_number_mode, generate_toc)
+    except Exception as e:
+        raise e
     
     # Always print the result to stdout
     return result

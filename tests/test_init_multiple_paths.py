@@ -1,8 +1,9 @@
 import pytest
 import os
-from nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, verify_path, init
+from nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, verify_path, init, logger, setup_logging
 import sys
 from io import StringIO
+import logging
 
 def test_init_multiple_paths(tmpdir):
     # Create test files
@@ -78,3 +79,4 @@ def test_init_multiple_paths_toc(tmpdir):
     assert "Line 2" in result
     assert "Line 3" in result
     assert "Line 4" in result
+

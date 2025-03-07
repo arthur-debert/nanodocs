@@ -61,3 +61,39 @@ def test_is_bundle_file_with_directory(tmpdir):
     
     # Test that a directory is not recognized as a bundle
     assert is_bundle_file(str(dir_path)) == False
+
+def test_is_bundle_file_with_comments(tmpdir):
+    # Create a bundle file with comments
+    bundle_file = tmpdir.join("comments_bundle.txt")
+    bundle_file.write("# This is a comment\n" + str(tmpdir.join("referenced_file.txt")))
+    
+    # Create the referenced file
+    referenced_file = tmpdir.join("referenced_file.txt")
+    referenced_file.write("Some content")
+    
+    # Test that the bundle file is recognized as a bundle
+    assert is_bundle_file(str(bundle_file)) == True
+
+def test_is_bundle_file_with_leading_and_trailing_whitespace(tmpdir):
+    # Create a bundle file with leading and trailing whitespace
+    bundle_file = tmpdir.join("whitespace_bundle.txt")
+    bundle_file.write("   " + str(tmpdir.join("referenced_file.txt")) + "   \n")
+    
+    # Create the referenced file
+    referenced_file = tmpdir.join("referenced_file.txt")
+    referenced_file.write("Some content")
+    
+    # Test that the bundle file is recognized as a bundle
+    assert is_bundle_file(str(bundle_file)) == True
+
+def test_is_bundle_file_with_multiple_lines_and_invalid_paths(tmpdir):
+    # Create a bundle file with multiple lines, including invalid paths
+    bundle_file = tmpdir.join("multiple_lines_bundle.txt")
+    bundle_file.write("/invalid/path1.txt\n" + str(tmpdir.join("referenced_file.txt")) + "\n/invalid/path2.txt")
+    
+    # Create the referenced file
+    referenced_file = tmpdir.join("referenced_file.txt")
+    referenced_file.write("Some content")
+    
+    # Test that the bundle file is recognized as a bundle
+    assert is_bundle_file(str(bundle_file)) == False

@@ -1,8 +1,9 @@
 import pytest
 import os
-from nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, verify_path, init
+from nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, verify_path, init, logger, setup_logging
 import sys
 from io import StringIO
+import logging
 
 def test_init_directory_no_line_numbers(tmpdir):
     # Create directory structure

@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc import process_file
+from nanodoc import create_header, LINE_WIDTH, process_file
 
 def test_process_file_no_line_numbers(tmpdir):
     test_file = tmpdir.join("test_file.txt")
@@ -29,5 +29,14 @@ def test_process_file_with_line_numbers_file(tmpdir):
     assert "2: Line 2" in output
 
 def test_process_file_not_found():
-    output, _ = process_file("non_existent_file.txt", None, 0)
+    file_path = "nonexistent_file.txt"
+    output, _ = process_file(file_path, None, 0)
     assert "Error: File not found" in output
+
+def test_process_file_header_assignment(tmpdir):
+    test_file = tmpdir.join("test_file.txt")
+    test_file.write("test")
+    file_path = str(test_file)
+    output, _ = process_file(file_path, None, 0)
+    header = create_header(os.path.basename(file_path)) + "\n"
+    assert output.startswith(header)

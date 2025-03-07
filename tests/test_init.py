@@ -65,3 +65,18 @@ def test_init_toc(tmpdir):
     assert "test_file.txt" in result
     assert "Line 1" in result
     assert "Line 2" in result
+
+def test_init_bundle_error(tmpdir, capsys, monkeypatch):
+    bundle_file = tmpdir.join("test_bundle.txt")
+    bundle_file.write("/nonexistent/file1.txt")
+
+    def mock_sys_exit(code):
+        raise SystemExit(code)
+
+    monkeypatch.setattr(sys, "exit", mock_sys_exit)
+
+    with pytest.raises(SystemExit) as excinfo:
+        init([str(bundle_file)])
+    assert excinfo.value.code == 1
+    captured = capsys.readouterr()
+    assert "No valid files found in bundle" in captured.out
