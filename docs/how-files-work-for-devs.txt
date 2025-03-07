@@ -1,0 +1,90 @@
+NANODOC CODE FLOW: FROM ARGUMENTS TO PROCESSING
+==============================================
+
+This document explains how nanodoc handles file arguments internally, from
+argument parsing to the file processing stage. This is meant for developers
+working on the nanodoc codebase.
+
+MAIN CODE FLOW
+--------------
+
+1. Arguments are parsed via argparse
+2. Line numbering mode is determined (-n → "file", -nn → "all")
+3. to_stds() is called with source files, verbose setting, line numbering mode, and TOC flag
+4. to_stds() calls init() with these parameters
+5. init() processes the sources and calls process_all() with verified files
+6. process_all() handles the actual bundling of content
+
+THE INIT() FUNCTION
+------------------
+
+The init() function is the core of the file handling logic:
+
+1. It tracks the original source arguments provided by the user
+2. Expands sources through get_source_files()
+3. Creates verified_sources list for valid files
+4. Processes bundle files only if directly specified by user
+5. Returns the combined output from process_all()
+
+SOURCE EXPANSION
+--------------
+
+Different source types are handled as follows:
+
+1. DIRECTORIES:
+   - Calls expand_directory() to find all .txt and .md files
+   - Returns sorted list of files from the directory
+   - Each file is individually verified later
+   - VALID: Directory exists and contains at least one .txt/.md file
+   - INVALID: Directory doesn't exist (exits with error code 127)
+
+2. BUNDLE FILES:
+   - Only processed if they were directly provided as arguments (in original_sources) 
+   - Must end with .txt extension
+   - Calls expand_bundles() to read file paths from bundle
+   - Each path from bundle is verified individually
+   - VALID: Bundle exists and contains at least one valid file path
+   - INVALID: Bundle file not found (exits with error code 127)
+
+3. REGULAR FILES:
+   - Simply verified that they exist
+   - VALID: File exists
+   - INVALID: File not found (exits with error code 127)
+
+PATH VERIFICATION
+---------------
+
+The verify_path() function:
+   - Checks if the path exists and is a file
+   - If valid, returns the path
+   - If invalid, prints an error and exits with code 127
+
+ERROR HANDLING
+------------
+
+Several error conditions are handled:
+   - Non-existent directories → Error and exit
+   - Non-existent bundle files → Error and exit
+   - Invalid paths in bundle files → Error and exit
+   - No valid sources found → Returns error message
+
+PROCESSING FLOW EXAMPLE
+---------------------
+
+For command: nanodoc file1.txt docs/ bundle.txt
+
+1. original_sources = ["file1.txt", "docs/", "bundle.txt"]
+2. expanded_sources becomes:
+   - file1.txt (from file1.txt)
+   - docs/file2.md, docs/file3.txt (from expanding docs/)
+   - bundle.txt (from bundle.txt)
+3. For each source in expanded_sources:
+   - If in original_sources and is a .txt file:
+     * For bundle.txt: Read contents and add each referenced file to verified_sources
+   - Otherwise add to verified_sources directly
+4. verified_sources becomes: [file1.txt, docs/file2.md, docs/file3.txt, file4.txt, file5.md]
+   (where file4.txt and file5.md were references inside bundle.txt)
+5. process_all() is called with verified_sources
+
+This separation ensures bundle files are only processed when directly provided
+by the user, not when discovered through directory scanning.
