@@ -7,11 +7,12 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
+
+[project.optional-dependencies]
+dev = [
     "pytest (>=8.3.5,<9.0.0)",
     "black (>=25.1.0,<26.0.0)"
 ]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
