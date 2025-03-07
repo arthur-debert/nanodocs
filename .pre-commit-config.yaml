@@ -117,10 +117,30 @@ repos:
       - id: black
         files: '\.py$'
         stages: [pre-commit]
+  - repo: local
+    hooks:
+      - id: poetry check
+        name: Run poetry check for changes
+        entry: bash -c 'poetry lock && poetry check'
+        language: system
+        pass_filenames: false
+        always_run: true
 
   #############################################################################
   ### Stage all fixes before checking hooks run
   #############################################################################
+  # Add this new repo and hook after your existing hooks
+  - repo: local
+    hooks:
+      - id: stage-poetry-lock
+        name: Stage poetry.lock if modified
+        entry: bash -c 'git add poetry.lock 2>/dev/null || true'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+        # Run this hook after the poetry check hook and before the git-add-all-fixes hook
+
   - repo: local
     hooks:
       - id: git-add-all-fixes
