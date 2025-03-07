@@ -527,8 +527,8 @@ if __name__ == "__main__":
     parser.add_argument("--no-header", action="store_true", help="Hide file headers")
     parser.add_argument("--header-seq", choices=["numerical", "letter", "roman"], 
                       help="Add sequence numbers to headers (numerical, letter, or roman)")
-    parser.add_argument("--header-style", choices=["filename", "path", "nice"], default="filename",
-                      help="Header style: filename (default), path (full path), or nice (formatted title)")
+    parser.add_argument("--header-style", choices=["filename", "path", "nice"], default="nice",
+                      help="Header style: nice (default, formatted title), filename (just filename), or path (full path)")
     
     parser.add_argument("sources", nargs="*", help="Source file(s)")
     parser.add_argument(
