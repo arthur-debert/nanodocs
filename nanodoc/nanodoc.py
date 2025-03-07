@@ -478,6 +478,72 @@ def to_stds(
 # Main Processing - Core processing functions
 ################################################################################
 
+def generate_table_of_contents(verified_sources, style=None):
+    """Generate a table of contents for the given source files.
+
+    Args:
+        verified_sources (list): List of verified source file paths.
+        style (str): The header style (filename, path, nice, or None).
+
+    Returns:
+        tuple: (str, dict) The table of contents string and a dictionary mapping
+               source files to their line numbers in the final document.
+    """
+    logger.debug(f"Generating table of contents for {len(verified_sources)} files")
+    
+    # Calculate line numbers for TOC
+    toc_line_numbers = {}
+    current_line = 0
+
+    # Calculate the size of the TOC header
+    toc_header_lines = 2  # Header line + blank line
+
+    # Calculate the size of each TOC entry (filename + line number)
+    toc_entries_lines = len(verified_sources)
+
+    # Add blank line after TOC
+    toc_footer_lines = 1
+
+    # Total TOC size
+    toc_size = toc_header_lines + toc_entries_lines + toc_footer_lines
+    current_line = toc_size
+
+    # Calculate line numbers for each file
+    for source_file in verified_sources:
+        # Add 3 for the file header (1 for the header line, 2 for the blank lines)
+        toc_line_numbers[source_file] = current_line + 3
+        with open(source_file, "r") as f:
+            file_lines = len(f.readlines())
+        # Add file lines plus 3 for the header (1 for header line, 2 for blank lines)
+        current_line += file_lines + 3
+
+    # Create TOC with line numbers
+    toc = ""
+    toc += "\n" + create_header("TOC", sequence=None, style=style) + "\n\n"
+
+    # Format filenames according to header style
+    formatted_filenames = {}
+    for source_file in verified_sources:
+        filename = os.path.basename(source_file)
+        formatted_filenames[source_file] = apply_style_to_filename(
+            filename, style, source_file
+        )
+
+    max_filename_length = max(
+        len(formatted_name) for formatted_name in formatted_filenames.values()
+    )
+
+    for source_file in verified_sources:
+        formatted_name = formatted_filenames[source_file]
+        line_num = toc_line_numbers[source_file]
+        # Format the TOC entry with dots aligning the line numbers
+        dots = "." * (max_filename_length - len(formatted_name) + 5)
+        toc += f"{formatted_name} {dots} {line_num}\n"
+
+    toc += "\n"
+    
+    return toc, toc_line_numbers
+
 def process_file(
     file_path,
     line_number_mode,
@@ -575,58 +641,10 @@ def process_all(
     # Sort the verified sources with custom sorting
     verified_sources = sorted(verified_sources, key=file_sort_key)
 
-    # Pre-calculate line numbers for TOC if needed
-    toc_line_numbers = {}
-    current_line = 0
-
-    if generate_toc:
-        # Calculate the size of the TOC header
-        toc_header_lines = 2  # Header line + blank line
-
-        # Calculate the size of each TOC entry (filename + line number)
-        toc_entries_lines = len(verified_sources)
-
-        # Add blank line after TOC
-        toc_footer_lines = 1
-
-        # Total TOC size
-        toc_size = toc_header_lines + toc_entries_lines + toc_footer_lines
-        current_line = toc_size
-
-        # Calculate line numbers for each file
-        for source_file in verified_sources:
-            # Add 3 for the file header (1 for the header line, 2 for the blank lines)
-            toc_line_numbers[source_file] = current_line + 3
-            with open(source_file, "r") as f:
-                file_lines = len(f.readlines())
-            # Add file lines plus 3 for the header (1 for header line, 2 for blank lines)
-            current_line += file_lines + 3
-
-    # Create TOC with line numbers
+    # Generate table of contents if needed
     toc = ""
     if generate_toc:
-        toc += "\n" + create_header("TOC", sequence=None, style=style) + "\n\n"
-
-        # Format filenames according to header style
-        formatted_filenames = {}
-        for source_file in verified_sources:
-            filename = os.path.basename(source_file)
-            formatted_filenames[source_file] = apply_style_to_filename(
-                filename, style, source_file
-            )
-
-        max_filename_length = max(
-            len(formatted_name) for formatted_name in formatted_filenames.values()
-        )
-
-        for source_file in verified_sources:
-            formatted_name = formatted_filenames[source_file]
-            line_num = toc_line_numbers[source_file]
-            # Format the TOC entry with dots aligning the line numbers
-            dots = "." * (max_filename_length - len(formatted_name) + 5)
-            toc += f"{formatted_name} {dots} {line_num}\n"
-
-        toc += "\n"
+        toc, _ = generate_table_of_contents(verified_sources, style)
 
     # Reset line counter for actual file processing
     line_counter = 0
