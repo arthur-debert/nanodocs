@@ -31,7 +31,7 @@ jobs:
         env:
           REPO_NAME: ${{ env.REPO_NAME }}
         run: |
-          poetry run pytest -vvv --cov-branch --cov-report=xml --cov=${{ env.REPO_NAME }}
+          poetry run pytest -vvv --cov-branch --cov-report=xml --cov=nanodoc
           ls -lah
 
       - name: Upload coverage reports to Codecov
