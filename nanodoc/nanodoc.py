@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-""""
+""" "
 # nanodocs
 
 nanodocs is an ultra-lightweight documentation generator. no frills: concat
@@ -107,22 +107,26 @@ import re
 VERSION = "0.1.0"
 LINE_WIDTH = 80
 
+
 # Custom exception for bundle file errors
 class BundleError(Exception):
     """Custom exception for handling errors related to bundle files."""
+
     pass
+
 
 # Initialize logger at the module level - disabled by default
 logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
 
+
 def setup_logging(to_stderr=False, enabled=False):
     """Configure logging based on requirements.
-    
+
     Args:
         to_stderr (bool): If True, logs to stderr instead of stdout.
         enabled (bool): If True, sets logging level to DEBUG, otherwise CRITICAL.
-        
+
     Returns:
         logger: Configured logging object.
     """
@@ -131,11 +135,13 @@ def setup_logging(to_stderr=False, enabled=False):
         # Set initial log level
         level = logging.DEBUG if enabled else logging.CRITICAL
         logger.setLevel(level)
-        
+
         # Create handler to the appropriate stream
         stream = sys.stderr if to_stderr else sys.stdout
         handler = logging.StreamHandler(stream)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     else:
@@ -144,9 +150,12 @@ def setup_logging(to_stderr=False, enabled=False):
         logger.setLevel(level)
     return logger
 
-def create_header(text, char="#", header_seq=None, seq_index=0, header_style=None, original_path=None):
+
+def create_header(
+    text, char="#", header_seq=None, seq_index=0, header_style=None, original_path=None
+):
     """Create a formatted header with the given text.
-    
+
     Args:
         text (str): The text to include in the header.
         char (str): The character to use for the header border.
@@ -154,7 +163,7 @@ def create_header(text, char="#", header_seq=None, seq_index=0, header_style=Non
         seq_index (int): The index of the file in the sequence.
         header_style (str): The header style (filename, path, nice, or None).
         original_path (str): The original file path (used for path and nice styles).
-        
+
     Returns:
         str: A formatted header string with the text centered.
     """
@@ -170,16 +179,16 @@ def create_header(text, char="#", header_seq=None, seq_index=0, header_style=Non
             # Remove extension, replace - and _ with spaces, title case, then add filename in parentheses
             filename = os.path.basename(original_path)
             basename = os.path.splitext(filename)[0]  # Remove extension
-            
+
             # Replace - and _ with spaces
-            nice_name = re.sub(r'[-_]', ' ', basename)
-            
+            nice_name = re.sub(r"[-_]", " ", basename)
+
             # Title case
             nice_name = nice_name.title()
-            
+
             # Add filename in parentheses
             text = f"{nice_name} ({filename})"
-    
+
     # Apply sequence prefix if header_seq is specified
     if header_seq:
         if header_seq == "numerical":
@@ -194,27 +203,46 @@ def create_header(text, char="#", header_seq=None, seq_index=0, header_style=Non
             text = prefix + text
         elif header_seq == "roman":
             # Roman numerals: i., ii., etc.
-            roman_numerals = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv']
+            roman_numerals = [
+                "i",
+                "ii",
+                "iii",
+                "iv",
+                "v",
+                "vi",
+                "vii",
+                "viii",
+                "ix",
+                "x",
+                "xi",
+                "xii",
+                "xiii",
+                "xiv",
+                "xv",
+            ]
             prefix = f"{roman_numerals[seq_index % len(roman_numerals)]}. "
             text = prefix + text
-    
+
     # Left-adjusted header (no # characters)
     header = text
     # Adjust if the header is shorter than LINE_WIDTH due to odd padding
     # header += char * (LINE_WIDTH - len(header))
     return header
 
+
 def expand_directory(directory, extensions=[".txt", ".md"]):
     """Find all files in a directory with specified extensions.
-    
+
     Args:
         directory (str): The directory path to search.
         extensions (list): List of file extensions to include.
-        
+
     Returns:
         list: A sorted list of file paths matching the extensions.
     """
-    logger.debug(f"Expanding directory with directory='{directory}', extensions='{extensions}'")
+    logger.debug(
+        f"Expanding directory with directory='{directory}', extensions='{extensions}'"
+    )
     matches = []
     for root, _, filenames in os.walk(directory):
         for filename in filenames:
@@ -222,15 +250,16 @@ def expand_directory(directory, extensions=[".txt", ".md"]):
                 matches.append(os.path.join(root, filename))
     return sorted(matches)
 
+
 def verify_path(path):
     """Verify that a given path exists and is a file.
-    
+
     Args:
         path (str): The file path to verify.
-        
+
     Returns:
         str: The verified path.
-        
+
     Raises:
         FileNotFoundError: If the path is not a valid file.
     """
@@ -239,15 +268,16 @@ def verify_path(path):
         raise FileNotFoundError(f"Error: Path is not a file: {path}")
     return path
 
+
 def expand_bundles(bundle_file):
     """Extract list of files from a bundle file.
-    
+
     Args:
         bundle_file (str): Path to the bundle file.
-        
+
     Returns:
         list: A list of valid file paths contained in the bundle.
-        
+
     Raises:
         BundleError: If bundle file not found or contains no valid files.
     """
@@ -257,25 +287,26 @@ def expand_bundles(bundle_file):
             lines = [line.strip() for line in f if line.strip()]  # Skip empty lines
     except FileNotFoundError:
         raise BundleError(f"Bundle file not found: {bundle_file}")
-    
+
     expanded_files = []
     for line in lines:
         if not os.path.isfile(line):
             logger.warning(f"File not found in bundle: {line}")  # Log the missing file
         else:
             expanded_files.append(line)
-    
+
     if not expanded_files:
         raise BundleError(f"No valid files found in bundle: {bundle_file}")
 
     return expanded_files
 
+
 def get_source_files(source):
     """Get list of source files based on the type of input.
-    
+
     Args:
         source (str): A file path, directory path, or bundle file.
-        
+
     Returns:
         list: A list of source file paths.
     """
@@ -287,14 +318,23 @@ def get_source_files(source):
     else:
         return [source]
 
-def process_file(file_path, line_number_mode, line_counter, show_header=True, header_seq=None, seq_index=0, header_style=None):
+
+def process_file(
+    file_path,
+    line_number_mode,
+    line_counter,
+    show_header=True,
+    header_seq=None,
+    seq_index=0,
+    header_style=None,
+):
     """Process a single file and format its content.
-    
+
     Args:
         file_path (str): The path of the file to process.
         line_number_mode (str): The line numbering mode ('file', 'all', or None).
         line_counter (int): The current global line counter.
-        
+
         show_header (bool): Whether to show the header.
         header_seq (str): The header sequence type (numerical, letter, roman, or None).
         seq_index (int): The index of the file in the sequence.
@@ -303,7 +343,9 @@ def process_file(file_path, line_number_mode, line_counter, show_header=True, he
         tuple: (str, int) Processed file content with header and line numbers,
                and the number of lines in the file.
     """
-    logger.debug(f"Processing file: {file_path}, line_number_mode: {line_number_mode}, line_counter: {line_counter}")
+    logger.debug(
+        f"Processing file: {file_path}, line_number_mode: {line_number_mode}, line_counter: {line_counter}"
+    )
     try:
         with open(file_path, "r") as f:
             lines = f.readlines()
@@ -312,9 +354,18 @@ def process_file(file_path, line_number_mode, line_counter, show_header=True, he
 
     output = ""
     if show_header:
-        header = "\n" + create_header(os.path.basename(file_path), header_seq=header_seq, seq_index=seq_index, header_style=header_style, original_path=file_path) + "\n\n"
+        header = (
+            "\n"
+            + create_header(
+                os.path.basename(file_path),
+                header_seq=header_seq,
+                seq_index=seq_index,
+                header_style=header_style,
+                original_path=file_path,
+            )
+            + "\n\n"
+        )
         output = header
-    
 
     for i, line in enumerate(lines):
         line_number = ""
@@ -325,21 +376,31 @@ def process_file(file_path, line_number_mode, line_counter, show_header=True, he
         output += line_number + line
     return output, len(lines)
 
-def process_all(verified_sources, line_number_mode, generate_toc, show_header=True, header_seq=None, header_style=None):
+
+def process_all(
+    verified_sources,
+    line_number_mode,
+    generate_toc,
+    show_header=True,
+    header_seq=None,
+    header_style=None,
+):
     """Process all source files and combine them.
-    
+
     Args:
         verified_sources (list): List of verified source file paths.
         line_number_mode (str): Line numbering mode ('file', 'all', or None).
         generate_toc (bool): Whether to generate a table of contents.
-        
+
         show_header (bool): Whether to show headers.
         header_seq (str): The header sequence type (numerical, letter, roman, or None).
         header_style (str): The header style (filename, path, nice, or None).
     Returns:
         str: The combined content of all files with formatting.
     """
-    logger.debug(f"Processing all files, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}")
+    logger.debug(
+        f"Processing all files, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}"
+    )
     output_buffer = ""
     line_counter = 0
 
@@ -349,9 +410,9 @@ def process_all(verified_sources, line_number_mode, generate_toc, show_header=Tr
         base_name = os.path.splitext(os.path.basename(path))[0]
         ext = os.path.splitext(path)[1]
         # This ensures test_file.txt comes before test_file.md
-        ext_priority = 0 if ext == '.txt' else 1 if ext == '.md' else 2
+        ext_priority = 0 if ext == ".txt" else 1 if ext == ".md" else 2
         return (base_name, ext_priority)
-    
+
     # Sort the verified sources with custom sorting
     verified_sources = sorted(verified_sources, key=file_sort_key)
 
@@ -377,7 +438,7 @@ def process_all(verified_sources, line_number_mode, generate_toc, show_header=Tr
         for source_file in verified_sources:
             # Add 3 for the file header (1 for the header line, 2 for the blank lines)
             toc_line_numbers[source_file] = current_line + 3
-            with open(source_file, 'r') as f:
+            with open(source_file, "r") as f:
                 file_lines = len(f.readlines())
             # Add file lines plus 3 for the header (1 for header line, 2 for blank lines)
             current_line += file_lines + 3
@@ -385,8 +446,12 @@ def process_all(verified_sources, line_number_mode, generate_toc, show_header=Tr
     # Create TOC with line numbers
     toc = ""
     if generate_toc:
-        toc += "\n" + create_header("TOC", header_seq=None, header_style=header_style) + "\n\n"
-        
+        toc += (
+            "\n"
+            + create_header("TOC", header_seq=None, header_style=header_style)
+            + "\n\n"
+        )
+
         # Format filenames according to header style
         formatted_filenames = {}
         for source_file in verified_sources:
@@ -397,13 +462,15 @@ def process_all(verified_sources, line_number_mode, generate_toc, show_header=Tr
                 # Use the same formatting as in create_header
                 filename = os.path.basename(source_file)
                 basename = os.path.splitext(filename)[0]
-                nice_name = re.sub(r'[-_]', ' ', basename)
+                nice_name = re.sub(r"[-_]", " ", basename)
                 nice_name = nice_name.title()
                 formatted_filenames[source_file] = f"{nice_name} ({filename})"
             else:  # default or "filename"
                 formatted_filenames[source_file] = basename
-        
-        max_filename_length = max(len(formatted_name) for formatted_name in formatted_filenames.values())
+
+        max_filename_length = max(
+            len(formatted_name) for formatted_name in formatted_filenames.values()
+        )
 
         for source_file in verified_sources:
             formatted_name = formatted_filenames[source_file]
@@ -421,7 +488,15 @@ def process_all(verified_sources, line_number_mode, generate_toc, show_header=Tr
     for i, source_file in enumerate(verified_sources):
         if line_number_mode == "file":
             line_counter = 0
-        file_output, num_lines = process_file(source_file, line_number_mode, line_counter, show_header, header_seq, i, header_style)
+        file_output, num_lines = process_file(
+            source_file,
+            line_number_mode,
+            line_counter,
+            show_header,
+            header_seq,
+            i,
+            header_style,
+        )
         output_buffer += file_output
         line_counter += num_lines
 
@@ -430,21 +505,22 @@ def process_all(verified_sources, line_number_mode, generate_toc, show_header=Tr
 
     return output_buffer
 
+
 def is_bundle_file(file_path):
     """Determine if a file is a bundle file by checking its contents.
-    
-    A file is considered a bundle if its first non-empty, non-comment line 
+
+    A file is considered a bundle if its first non-empty, non-comment line
     points to an existing file.
-    
+
     Args:
         file_path (str): The path to the file to check.
-        
+
     Returns:
         bool: True if the file appears to be a bundle file, False otherwise.
     """
     logger.debug(f"Checking if {file_path} is a bundle file")
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             # Check the first few non-empty lines
             for _ in range(5):  # Check up to 5 lines
                 line = f.readline().strip()
@@ -456,17 +532,28 @@ def is_bundle_file(file_path):
                 if os.path.isfile(line):
                     return True
                 else:
-                    return False # Not a bundle file if a line is not a valid file
-            return False # Not a bundle file if none of the first 5 lines are valid files
+                    return False  # Not a bundle file if a line is not a valid file
+            return (
+                False  # Not a bundle file if none of the first 5 lines are valid files
+            )
     except FileNotFoundError:
         return False
     except Exception as e:
         logger.error(f"Error checking bundle file: {e}")
         return False
 
-def init(srcs, verbose=False, line_number_mode=None, generate_toc=False, show_header=True, header_seq=None, header_style=None):
+
+def init(
+    srcs,
+    verbose=False,
+    line_number_mode=None,
+    generate_toc=False,
+    show_header=True,
+    header_seq=None,
+    header_style=None,
+):
     """Initialize and process the sources.
-    
+
     Args:
         srcs (list): List of source file paths, directories, or bundle files.
         verbose (bool): Whether to enable verbose logging.
@@ -475,12 +562,14 @@ def init(srcs, verbose=False, line_number_mode=None, generate_toc=False, show_he
         show_header (bool): Whether to show headers.
         header_seq (str): The header sequence type (numerical, letter, roman, or None).
         header_style (str): The header style (filename, path, nice, or None).
-        
+
     Returns:
         str: The processed output.
     """
-    logger.debug(f"Initializing with sources: {srcs}, verbose: {verbose}, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}")
-    
+    logger.debug(
+        f"Initializing with sources: {srcs}, verbose: {verbose}, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}"
+    )
+
     verified_sources = []
     for source in srcs:
         try:
@@ -495,14 +584,30 @@ def init(srcs, verbose=False, line_number_mode=None, generate_toc=False, show_he
     if not verified_sources:
         return "Error: No valid source files found."
 
-    output = process_all(verified_sources, line_number_mode, generate_toc, show_header, header_seq, header_style)
+    output = process_all(
+        verified_sources,
+        line_number_mode,
+        generate_toc,
+        show_header,
+        header_seq,
+        header_style,
+    )
     return output
 
-def to_stds(srcs, verbose=False, line_number_mode=None, generate_toc=False, show_header=True, header_seq=None, header_style=None):
+
+def to_stds(
+    srcs,
+    verbose=False,
+    line_number_mode=None,
+    generate_toc=False,
+    show_header=True,
+    header_seq=None,
+    header_style=None,
+):
     """Process sources and return the result as a string.
-    
+
     This function handles setting up logging and error handling.
-    
+
     Args:
         srcs (list): List of source file paths, directories, or bundle files.
         verbose (bool): Whether to enable verbose logging.
@@ -511,22 +616,31 @@ def to_stds(srcs, verbose=False, line_number_mode=None, generate_toc=False, show
         show_header (bool): Whether to show headers.
         header_seq (str): The header sequence type (numerical, letter, roman, or None).
         header_style (str): The header style (filename, path, nice, or None).
-        
+
     Returns:
         str: The processed output.
-        
+
     Raises:
         Exception: Any error encountered during processing.
     """
     # Enable logging only when verbose is True
     setup_logging(to_stderr=True, enabled=verbose)
-    try:    
-        result = init(srcs, verbose, line_number_mode, generate_toc, show_header, header_seq, header_style)
+    try:
+        result = init(
+            srcs,
+            verbose,
+            line_number_mode,
+            generate_toc,
+            show_header,
+            header_seq,
+            header_style,
+        )
     except Exception as e:
         raise e
-    
+
     # Always print the result to stdout
     return result
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -542,15 +656,20 @@ if __name__ == "__main__":
     )
     parser.add_argument("--toc", action="store_true", help="Generate table of contents")
     parser.add_argument("--no-header", action="store_true", help="Hide file headers")
-    parser.add_argument("--header-seq", choices=["numerical", "letter", "roman"], 
-                      help="Add sequence numbers to headers (numerical, letter, or roman)")
-    parser.add_argument("--header-style", choices=["filename", "path", "nice"], default="nice",
-                      help="Header style: nice (default, formatted title), filename (just filename), or path (full path)")
-    
-    parser.add_argument("sources", nargs="*", help="Source file(s)")
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {VERSION}"
+        "--header-seq",
+        choices=["numerical", "letter", "roman"],
+        help="Add sequence numbers to headers (numerical, letter, or roman)",
     )
+    parser.add_argument(
+        "--header-style",
+        choices=["filename", "path", "nice"],
+        default="nice",
+        help="Header style: nice (default, formatted title), filename (just filename), or path (full path)",
+    )
+
+    parser.add_argument("sources", nargs="*", help="Source file(s)")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     parser.add_argument(
         "help",
         nargs="?",
