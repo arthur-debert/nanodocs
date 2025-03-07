@@ -301,6 +301,8 @@ def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
         try:
             for file in get_source_files(source):
                 verified_sources.append(verify_path(file))
+        except BundleError as e:
+            return f"{e}"
         except FileNotFoundError as e:
             print(e)
             sys.exit(1)
