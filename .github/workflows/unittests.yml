@@ -5,6 +5,10 @@ on: [push, pull_request]
 jobs:
   python-unittests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12"]
+      fail-fast: false
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # yamllint disable-line rule:truthy
     steps:
@@ -14,18 +18,20 @@ jobs:
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-poetry
         with:
-          python-version: "3.11"
-          cache-key-prefix: "test-env"
+          python-version: ${{ matrix.python-version }}
+          cache-key-prefix: "test-env-${{ matrix.python-version }}"
 
       - name: Extract repo name
         id: extract_repo_name
-        run: echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f2)" >> $GITHUB_ENV
+        run:
+          echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f2)" >>
+          $GITHUB_ENV
 
       - name: Run tests
         env:
           REPO_NAME: ${{ env.REPO_NAME }}
         run: |
-          poetry run pytest -vvv --cov-branch --cov-report=xml --cov=${{ env.REPO_NAME }}
+          poetry run pytest -vvv --cov-branch --cov-report=xml --cov=nanodoc
           ls -lah
 
       - name: Upload coverage reports to Codecov
