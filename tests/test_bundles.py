@@ -27,9 +27,9 @@ def test_expand_bundles_with_invalid_files(tmpdir):
     assert "/nonexistent/file.txt" in expanded_files
 
 def test_expand_bundles_not_found(tmpdir):
-    with pytest.raises(BundleError) as excinfo:
+    with pytest.raises(FileNotFoundError) as excinfo:
         expand_bundles("non_existent_bundle.txt")
-    assert "Bundle file not found" in str(excinfo.value)
+    assert "No such file or directory" in str(excinfo.value)
 
 def test_verify_path_not_found():
     with pytest.raises(FileNotFoundError) as excinfo:

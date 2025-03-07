@@ -159,11 +159,8 @@ def expand_bundles(bundle_file):
         BundleError: If bundle file not found or contains no valid files.
     """
     logger.debug(f"Expanding bundles from file: {bundle_file}")
-    try:
-        with open(bundle_file, "r") as f:
-            lines = [line.strip() for line in f if line.strip()]  # Skip empty lines
-    except FileNotFoundError:
-        raise BundleError(f"Bundle file not found: {bundle_file}")
+    with open(bundle_file, "r") as f:
+        lines = [line.strip() for line in f if line.strip()]  # Skip empty lines
 
     expanded_files = []
     for line in [l for l in lines if l and not l.startswith("#")]:
