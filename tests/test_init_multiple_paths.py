@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, init, logger, setup_logging
+from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, get_files_from_args, logger, setup_logging
 import sys
 from io import StringIO
 import logging
@@ -14,7 +14,9 @@ def test_init_multiple_paths(tmpdir):
     file_paths = [str(test_file1), str(test_file2)]
 
     # Call init with multiple test files
-    result = init(file_paths)
+    # Get verified sources and process them
+    verified_sources = get_files_from_args(file_paths)
+    result = process_all(verified_sources)
 
     # Assert that the file content is printed without line numbers
     assert "Line 1" in result
@@ -35,7 +37,9 @@ def test_init_multiple_paths_file_line_numbers(tmpdir):
     file_paths = [str(test_file1), str(test_file2)]
 
     # Call init with multiple test files and file line numbers
-    result = init(file_paths, line_number_mode="file")
+    # Get verified sources and process them with file line numbers
+    verified_sources = get_files_from_args(file_paths)
+    result = process_all(verified_sources, line_number_mode="file")
 
     # Assert that the file content is printed with file line numbers
     assert "1: Line 1" in result
@@ -52,7 +56,9 @@ def test_init_multiple_paths_all_line_numbers(tmpdir):
     file_paths = [str(test_file1), str(test_file2)]
 
     # Call init with multiple test files and all line numbers
-    result = init(file_paths, line_number_mode="all")
+    # Get verified sources and process them with all line numbers
+    verified_sources = get_files_from_args(file_paths)
+    result = process_all(verified_sources, line_number_mode="all")
 
     # Assert that the file content is printed with all line numbers
     assert "1: Line 1" in result
@@ -69,7 +75,9 @@ def test_init_multiple_paths_toc(tmpdir):
     file_paths = [str(test_file1), str(test_file2)]
 
     # Call init with multiple test files and TOC generation
-    result = init(file_paths, generate_toc=True)
+    # Get verified sources and process them with TOC generation
+    verified_sources = get_files_from_args(file_paths)
+    result = process_all(verified_sources, generate_toc=True)
 
     # Assert that the TOC is generated and the file content is printed
     assert create_header("TOC") in result

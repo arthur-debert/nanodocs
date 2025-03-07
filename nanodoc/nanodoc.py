@@ -439,53 +439,6 @@ def setup_logging(to_stderr=False, enabled=False):
     return logger
 
 
-def to_stds(
-    srcs,
-    verbose=False,
-    line_number_mode=None,
-    generate_toc=False,
-    show_header=True,
-    sequence=None,
-    style=None,
-):
-    """Process sources and return the result as a string.
-
-    This function handles setting up logging and error handling.
-
-    Args:
-        srcs (list): List of source file paths, directories, or bundle files.
-        verbose (bool): Whether to enable verbose logging.
-        line_number_mode (str): Line numbering mode ('file', 'all', or None).
-        generate_toc (bool): Whether to generate a table of contents.
-        show_header (bool): Whether to show headers.
-        sequence (str): The header sequence type (numerical, letter, roman, or None).
-        style (str): The header style (filename, path, nice, or None).
-
-    Returns:
-        str: The processed output.
-
-    Raises:
-        Exception: Any error encountered during processing.
-    """
-    # Enable logging only when verbose is True
-    setup_logging(to_stderr=True, enabled=verbose)
-    try:
-        result = init(
-            srcs,
-            verbose,
-            line_number_mode,
-            generate_toc,
-            show_header,
-            sequence,
-            style,
-        )
-    except Exception as e:
-        raise e
-
-    # Always print the result to stdout
-    return result
-
-
 ################################################################################
 # Main Processing - Core processing functions
 ################################################################################
@@ -616,21 +569,22 @@ def process_file(
     return output, len(lines)
 
 
-def process_all(
+def process_files(
     verified_sources,
-    line_number_mode,
-    generate_toc,
+    line_number_mode=None,
+    generate_toc=False,
     show_header=True,
     sequence=None,
     style=None,
 ):
-    """Process all source files and combine them.
+    """Process all source files and combine them into a single document.
+
+    This is the main entry point for both command-line usage and testing.
 
     Args:
         verified_sources (list): List of verified source file paths.
         line_number_mode (str): Line numbering mode ('file', 'all', or None).
         generate_toc (bool): Whether to generate a table of contents.
-
         show_header (bool): Whether to show headers.
         sequence (str): The header sequence type (numerical, letter, roman, or None).
         style (str): The header style (filename, path, nice, or None).
@@ -673,26 +627,18 @@ def process_all(
     return output_buffer
 
 
-def get_files_from_args(
-    srcs,
-    line_number_mode=None,
-    generate_toc=False,
-    show_header=True,
-    sequence=None,
-    style=None,
-):
-    """Process the sources and return the result as a string.
+# For backward compatibility with tests
+process_all = process_files
+
+
+def get_files_from_args(srcs):
+    """Process the sources and return a list of verified file paths.
 
     Args:
         srcs (list): List of source file paths, directories, or bundle files.
-        line_number_mode (str): Line numbering mode ('file', 'all', or None).
-        generate_toc (bool): Whether to generate a table of contents.
-        show_header (bool): Whether to show headers.
-        sequence (str): The header sequence type (numerical, letter, roman, or None).
-        style (str): The header style (filename, path, nice, or None).
 
     Returns:
-        str: The processed output.
+        list: A list of verified file paths.
     """
     # Phase 1: Expand all arguments into a flat list of file paths
     expanded_files = expand_args(srcs)
@@ -708,48 +654,6 @@ def get_files_from_args(
     # Sort the verified sources with custom sorting
     verified_sources = sorted(verified_sources, key=file_sort_key)
     return verified_sources
-
-
-def init(
-    srcs,
-    verbose=False,
-    line_number_mode=None,
-    generate_toc=False,
-    show_header=True,
-    sequence=None,
-    style=None,
-):
-    """Initialize and process the sources.
-
-    Args:
-        srcs (list): List of source file paths, directories, or bundle files.
-        verbose (bool): Whether to enable verbose logging.
-        line_number_mode (str): Line numbering mode ('file', 'all', or None).
-        generate_toc (bool): Whether to generate a table of contents.
-        show_header (bool): Whether to show headers.
-        sequence (str): The header sequence type (numerical, letter, roman, or None).
-        style (str): The header style (filename, path, nice, or None).
-
-    Returns:
-        str: The processed output.
-    """
-    logger.debug(
-        f"Initializing with sources: {srcs}, verbose: {verbose}, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}"
-    )
-    verified_sources = get_files_from_args(srcs)
-    # Check if we have any valid files
-    if not verified_sources:
-        return "Error: No valid source files found."
-
-    output = process_all(
-        verified_sources,
-        line_number_mode,
-        generate_toc,
-        show_header,
-        sequence,
-        style,
-    )
-    return output
 
 
 def parse_args():
@@ -828,18 +732,28 @@ def main():
     _check_help(args)
 
     try:
-        output = to_stds(
-            srcs=args.sources,
-            verbose=args.v,
-            line_number_mode=args.line_number_mode,  # Use the pre-processed line_number_mode
-            generate_toc=args.toc,
-            show_header=not args.no_header,
-            sequence=args.sequence,
-            style=args.style,
+        # Set up logging based on verbose flag
+        setup_logging(to_stderr=True, enabled=args.v)
+        
+        # Get verified sources from arguments
+        verified_sources = get_files_from_args(args.sources)
+        
+        # Process the files and print the result
+        if not verified_sources:
+            print("Error: No valid source files found.", file=sys.stderr)
+            sys.exit(1)
+            
+        output = process_files(
+            verified_sources,
+            args.line_number_mode,
+            args.toc,
+            not args.no_header,
+            args.sequence,
+            args.style
         )
         print(output)
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred: {e}", file=sys.stderr)
         sys.exit(1)
 
 

@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, init, logger, setup_logging
+from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, get_files_from_args, logger, setup_logging
 import sys
 from io import StringIO
 import logging
@@ -14,7 +14,9 @@ def test_init_directory_no_line_numbers(tmpdir):
     test_file_md.write("Line 3\nLine 4")
 
     # Call init with the directory
-    result = init([str(dir_path)])
+    # Get verified sources and process them
+    verified_sources = get_files_from_args([str(dir_path)])
+    result = process_all(verified_sources)
 
     # Assert that the file content is printed without line numbers
     assert "Line 1" in result
@@ -35,7 +37,9 @@ def test_init_directory_file_line_numbers(tmpdir):
     test_file_md.write("Line 3\nLine 4")
 
     # Call init with the directory and file line numbers
-    result = init([str(dir_path)], line_number_mode="file")
+    # Get verified sources and process them with file line numbers
+    verified_sources = get_files_from_args([str(dir_path)])
+    result = process_all(verified_sources, line_number_mode="file")
 
     # Assert that the file content is printed with file line numbers
     assert "1: Line 1" in result
@@ -52,7 +56,9 @@ def test_init_directory_all_line_numbers(tmpdir):
     test_file_md.write("Line 3\nLine 4")
 
     # Call init with the directory and all line numbers
-    result = init([str(dir_path)], line_number_mode="all")
+    # Get verified sources and process them with all line numbers
+    verified_sources = get_files_from_args([str(dir_path)])
+    result = process_all(verified_sources, line_number_mode="all")
 
     # Assert that the file content is printed with all line numbers
     assert "1: Line 1" in result
@@ -69,7 +75,9 @@ def test_init_directory_toc(tmpdir):
     test_file_md.write("Line 3\nLine 4")
 
     # Call init with the directory and TOC generation
-    result = init([str(dir_path)], generate_toc=True)
+    # Get verified sources and process them with TOC generation
+    verified_sources = get_files_from_args([str(dir_path)])
+    result = process_all(verified_sources, generate_toc=True)
 
     # Assert that the TOC is generated and the file content is printed
     assert create_header("TOC") in result

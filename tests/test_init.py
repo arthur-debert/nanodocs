@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, init
+from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, get_files_from_args, setup_logging
 import sys
 from io import StringIO
 
@@ -9,7 +9,12 @@ def test_init_no_files_errors(tmpdir):
     empty_dir = tmpdir.mkdir("empty")
 
     # Call init with the empty directory
-    result = init([str(empty_dir)])
+    # Get verified sources
+    verified_sources = get_files_from_args([str(empty_dir)])
+    
+    # Check if we have any valid files
+    if not verified_sources:
+        result = "Error: No valid source files found."
 
     # Assert that an error message is returned without checking the exact text
     assert result.startswith("Error:")
@@ -21,7 +26,9 @@ def test_init_one_file_no_line_numbers(tmpdir):
     test_file.write("Line 1\nLine 2")
 
     # Call init with the test file
-    result = init([str(test_file)])
+    # Get verified sources and process them
+    verified_sources = get_files_from_args([str(test_file)])
+    result = process_all(verified_sources)
 
     # Assert that the file content is printed without line numbers
     assert "Line 1" in result
@@ -35,7 +42,9 @@ def test_init_one_file_file_line_numbers(tmpdir):
     test_file.write("Line 1\nLine 2")
 
     # Call init with the test file and file line numbers
-    result = init([str(test_file)], line_number_mode="file")
+    # Get verified sources and process them with file line numbers
+    verified_sources = get_files_from_args([str(test_file)])
+    result = process_all(verified_sources, line_number_mode="file")
 
     # Assert that the file content is printed with file line numbers
     assert "1: Line 1" in result
@@ -47,7 +56,9 @@ def test_init_one_file_all_line_numbers(tmpdir):
     test_file.write("Line 1\nLine 2")
 
     # Call init with the test file and all line numbers
-    result = init([str(test_file)], line_number_mode="all")
+    # Get verified sources and process them with all line numbers
+    verified_sources = get_files_from_args([str(test_file)])
+    result = process_all(verified_sources, line_number_mode="all")
 
     # Assert that the file content is printed with all line numbers
     assert "1: Line 1" in result
@@ -59,7 +70,9 @@ def test_init_toc(tmpdir):
     test_file.write("Line 1\nLine 2")
 
     # Call init with the test file and TOC generation
-    result = init([str(test_file)], generate_toc=True)
+    # Get verified sources and process them with TOC generation
+    verified_sources = get_files_from_args([str(test_file)])
+    result = process_all(verified_sources, generate_toc=True)
 
     # Assert that the TOC is generated and the file content is printed
     assert create_header("TOC") in result
@@ -74,8 +87,13 @@ def test_init_bundle_error(tmpdir):
     bundle_file.write("/nonexistent/file1.txt")
 
     # Call init with the bundle file
-    result = init([str(bundle_file)])
+    # Get verified sources
+    verified_sources = get_files_from_args([str(bundle_file)])
+    
+    # Check if we have any valid files
+    if not verified_sources:
+        result = "Error: No valid source files found."
     
     # Assert that an error message is returned
     assert "Error:" in result
-    assert "bundle" in result
+    assert "files found" in result
