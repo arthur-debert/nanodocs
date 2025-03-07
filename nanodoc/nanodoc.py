@@ -111,7 +111,6 @@ LINE_WIDTH = 80
 class BundleError(Exception):
     """Custom exception for handling errors related to bundle files."""
 
-    pass
 
 
 # Initialize logger at the module level - disabled by default
