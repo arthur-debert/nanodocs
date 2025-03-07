@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-""" 
+"""
 # nanodocs
 
 nanodocs is an ultra-lightweight documentation generator. no frills: concat
@@ -112,7 +112,6 @@ class BundleError(Exception):
     """Custom exception for handling errors related to bundle files."""
 
 
-
 # Initialize logger at the module level - disabled by default
 logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
@@ -120,6 +119,7 @@ logger.setLevel(logging.CRITICAL)  # Start with logging disabled
 ################################################################################
 # Argument Expansion - Functions that turn arguments into a verified list of paths
 ################################################################################
+
 
 def expand_directory(directory, extensions=[".txt", ".md"]):
     """Find all files in a directory with specified extensions.
@@ -166,9 +166,9 @@ def expand_bundles(bundle_file):
         raise BundleError(f"Bundle file not found: {bundle_file}")
 
     expanded_files = []
-    for line in [l for l in lines if l and not l.startswith('#')]:
+    for line in [l for l in lines if l and not l.startswith("#")]:
         expanded_files.append(line)
-    
+
     # Note: validation is now done separately
 
     return expanded_files
@@ -197,9 +197,10 @@ def expand_args(args):
             return expand_bundles(arg)
         else:
             return [arg]  # Regular file path
-    
+
     # Use list comprehension with sum to flatten the list of lists
     return sum([expand_single_arg(arg) for arg in args], [])
+
 
 def verify_path(path):
     """Verify that a given path exists, is readable, and is not a directory.
@@ -262,9 +263,19 @@ def is_bundle_file(file_path):
         return False
 
 
+def file_sort_key(path):
+    """Key function for sorting files by name then extension priority."""
+    base_name = os.path.splitext(os.path.basename(path))[0]
+    ext = os.path.splitext(path)[1]
+    # This ensures test_file.txt comes before test_file.md
+    ext_priority = 0 if ext == ".txt" else 1 if ext == ".md" else 2
+    return (base_name, ext_priority)
+
+
 ################################################################################
 # Formatting - Functions related to headers, line numbers, and table of contents
 ################################################################################
+
 
 def apply_style_to_filename(filename, style, original_path=None):
     """Apply the specified style to a filename.
@@ -396,6 +407,7 @@ def create_header(
 # Sys - System-level functions for logging and output
 ################################################################################
 
+
 def setup_logging(to_stderr=False, enabled=False):
     """Configure logging based on requirements.
 
@@ -478,6 +490,7 @@ def to_stds(
 # Main Processing - Core processing functions
 ################################################################################
 
+
 def generate_table_of_contents(verified_sources, style=None):
     """Generate a table of contents for the given source files.
 
@@ -490,7 +503,7 @@ def generate_table_of_contents(verified_sources, style=None):
                source files to their line numbers in the final document.
     """
     logger.debug(f"Generating table of contents for {len(verified_sources)} files")
-    
+
     # Calculate line numbers for TOC
     toc_line_numbers = {}
     current_line = 0
@@ -541,8 +554,9 @@ def generate_table_of_contents(verified_sources, style=None):
         toc += f"{formatted_name} {dots} {line_num}\n"
 
     toc += "\n"
-    
+
     return toc, toc_line_numbers
+
 
 def process_file(
     file_path,
@@ -629,18 +643,6 @@ def process_all(
     output_buffer = ""
     line_counter = 0
 
-    # Custom sort to ensure .txt files come before .md files when base names match
-    def file_sort_key(path):
-        """Key function for sorting files by name then extension priority."""
-        base_name = os.path.splitext(os.path.basename(path))[0]
-        ext = os.path.splitext(path)[1]
-        # This ensures test_file.txt comes before test_file.md
-        ext_priority = 0 if ext == ".txt" else 1 if ext == ".md" else 2
-        return (base_name, ext_priority)
-
-    # Sort the verified sources with custom sorting
-    verified_sources = sorted(verified_sources, key=file_sort_key)
-
     # Generate table of contents if needed
     toc = ""
     if generate_toc:
@@ -671,6 +673,43 @@ def process_all(
     return output_buffer
 
 
+def get_files_from_args(
+    srcs,
+    line_number_mode=None,
+    generate_toc=False,
+    show_header=True,
+    sequence=None,
+    style=None,
+):
+    """Process the sources and return the result as a string.
+
+    Args:
+        srcs (list): List of source file paths, directories, or bundle files.
+        line_number_mode (str): Line numbering mode ('file', 'all', or None).
+        generate_toc (bool): Whether to generate a table of contents.
+        show_header (bool): Whether to show headers.
+        sequence (str): The header sequence type (numerical, letter, roman, or None).
+        style (str): The header style (filename, path, nice, or None).
+
+    Returns:
+        str: The processed output.
+    """
+    # Phase 1: Expand all arguments into a flat list of file paths
+    expanded_files = expand_args(srcs)
+    if not expanded_files:
+        return []
+    # Phase 2: Validate all file paths
+    verified_sources = []
+    for file_path in expanded_files:
+        try:
+            verified_sources.append(verify_path(file_path))
+        except (FileNotFoundError, PermissionError, IsADirectoryError):
+            pass  # Skip invalid files
+    # Sort the verified sources with custom sorting
+    verified_sources = sorted(verified_sources, key=file_sort_key)
+    return verified_sources
+
+
 def init(
     srcs,
     verbose=False,
@@ -697,15 +736,8 @@ def init(
     logger.debug(
         f"Initializing with sources: {srcs}, verbose: {verbose}, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}"
     )
-    
-    # Phase 1: Expand all arguments into a flat list of file paths
-    expanded_files = expand_args(srcs)
-    
-    if not expanded_files:
-        return "Error: No source files found."
-    
-    # Phase 2: Validate all file paths
-    verified_sources = [verify_path(file_path) for file_path in expanded_files]
+    verified_sources = get_files_from_args(srcs)
+    # Check if we have any valid files
     if not verified_sources:
         return "Error: No valid source files found."
 
@@ -722,7 +754,7 @@ def init(
 
 def parse_args():
     """Parse command-line arguments.
-    
+
     Returns:
         argparse.Namespace: The parsed arguments with processed values.
     """
@@ -760,9 +792,9 @@ def parse_args():
         default=None,
         choices=["help"],
     )
-    
+
     args = parser.parse_args()
-    
+
     # Process line numbering mode
     if args.n == 0:
         args.line_number_mode = None
@@ -770,8 +802,9 @@ def parse_args():
         args.line_number_mode = "file"
     else:  # args.n >= 2
         args.line_number_mode = "all"
-        
+
     return args
+
 
 def _check_help(args):
     # Handle help command before any logging occurs
@@ -787,13 +820,13 @@ def _check_help(args):
         parser.print_usage()
         sys.exit(0)
 
+
 def main():
     """Main entry point for the nanodoc application."""
     args = parse_args()
     # short circuit for help
     _check_help(args)
-    
-    
+
     try:
         output = to_stds(
             srcs=args.sources,
