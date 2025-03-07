@@ -2,7 +2,7 @@ import pytest
 import os
 import subprocess
 import sys
-from nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, verify_path, init, VERSION
+from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, verify_path, init, VERSION
 
 # Get the parent directory of the current module
 MODULE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

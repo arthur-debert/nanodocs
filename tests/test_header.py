@@ -1,5 +1,5 @@
 import pytest
-from nanodoc import create_header, LINE_WIDTH
+from nanodoc.nanodoc import create_header, LINE_WIDTH
 import os
 
 def test_create_header_contains_text():

@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc import is_bundle_file
+from nanodoc.nanodoc import is_bundle_file
 
 def test_is_bundle_file_with_valid_paths(tmpdir):
     # Create a test file that will be referenced in the bundle

@@ -3,7 +3,7 @@ import os
 import subprocess
 import tempfile
 import sys
-from nanodoc import create_header
+from nanodoc.nanodoc import create_header
 
 # Get the parent directory of the current module
 MODULE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

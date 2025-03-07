@@ -1,7 +1,7 @@
 import pytest
 import os
-from nanodoc import expand_bundles
-from nanodoc import BundleError
+from nanodoc.nanodoc import expand_bundles
+from nanodoc.nanodoc import BundleError
 
 def test_expand_bundles_valid(tmpdir):
     bundle_file = tmpdir.join("test_bundle.txt")

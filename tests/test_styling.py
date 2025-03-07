@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc import apply_style_to_filename, apply_sequence_to_text
+from nanodoc.nanodoc import apply_style_to_filename, apply_sequence_to_text
 
 def test_apply_style_to_filename_with_filename_style():
     filename = "test_file.txt"

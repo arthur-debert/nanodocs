@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc import expand_directory
+from nanodoc.nanodoc import expand_directory
 
 def test_expand_directory(tmpdir):
     # Create directory structure

@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc import create_header, LINE_WIDTH, process_all
+from nanodoc.nanodoc import create_header, LINE_WIDTH, process_all
 
 def test_process_all_toc_generation(tmpdir):
     test_file1 = tmpdir.join("test_file1.txt")
