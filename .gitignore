@@ -135,3 +135,4 @@ pytest.log
 */messages.mo
 **/messages.mo
 docs/site
+tmp
