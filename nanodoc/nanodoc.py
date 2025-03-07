@@ -190,38 +190,44 @@ def to_roman(num):
     return roman_num.lower()
 
 
-def apply_sequence_to_text(text, sequence, seq_index):
-    """Apply the specified sequence to text.
+def format_pos(position, seq_index):
+    """Format the sequence prefix based on the sequence type.
 
     Args:
-        text (str): The text to add sequence to.
-        sequence (str): The sequence type (numerical, letter, roman, or None).
+        sequence (str): The sequence type (numerical, letter, roman).
         seq_index (int): The index of the item in the sequence.
 
     Returns:
-        str: The text with sequence prefix.
+        str: The formatted sequence prefix.
     """
+    if not position:
+        return ""
+    
+    # Calculate one-indexed number first
+    one_indexed = seq_index + 1
+    
+    # Apply formatting based on sequence type
+    if position == "numerical":
+        return f"{int(one_indexed)}. "
+    elif position == "letter":
+        # Convert to lowercase letter (a=1, b=2, etc.)
+        letter = chr(96 + ((one_indexed - 1) % 26) + 1)
+        return f"{letter}. "
+    elif position == "roman":
+        return f"{to_roman(one_indexed)}. "
+    
+    # Default case if sequence is not recognized
+    return ""
+
+
+def apply_sequence_to_text(text, sequence, seq_index):
+    """Apply the specified sequence to text.
+
+    """
+
     logger.debug(f"Applying sequence '{sequence}' to text '{text}' with index {seq_index}")
-    
-    if not sequence:
-        return text
-    
-    if sequence == "numerical":
-        # Numerical sequence: 1., 2., etc.
-        prefix = f"{seq_index + 1}. "
-    elif sequence == "letter":
-        # Letter sequence: a., b., etc.
-        # ASCII 'a' is 97, so we add seq_index to get the right letter
-        letter = chr(97 + (seq_index % 26))
-        prefix = f"{letter}. "
-    elif sequence == "roman":
-        # Roman numerals: i., ii., etc.
-        prefix = f"{to_roman(seq_index + 1)}. "
-    else:
-        # If sequence is not recognized, return text as is
-        return text
-    
-    return prefix + text
+    prefix = format_pos(sequence, seq_index)
+    return prefix + text if prefix else text
 
 
 def setup_logging(to_stderr=False, enabled=False):
