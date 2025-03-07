@@ -734,22 +734,22 @@ def main():
     try:
         # Set up logging based on verbose flag
         setup_logging(to_stderr=True, enabled=args.v)
-        
+
         # Get verified sources from arguments
         verified_sources = get_files_from_args(args.sources)
-        
+
         # Process the files and print the result
         if not verified_sources:
             print("Error: No valid source files found.", file=sys.stderr)
             sys.exit(1)
-            
+
         output = process_files(
             verified_sources,
             args.line_number_mode,
             args.toc,
             not args.no_header,
             args.sequence,
-            args.style
+            args.style,
         )
         print(output)
     except Exception as e:
