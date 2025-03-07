@@ -1,6 +1,6 @@
 import pytest
 import os
-from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, verify_path, init, logger, setup_logging
+from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, init, logger, setup_logging
 import sys
 from io import StringIO
 import logging

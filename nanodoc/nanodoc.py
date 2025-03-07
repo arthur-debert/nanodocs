@@ -279,12 +279,14 @@ def create_header(
 def expand_directory(directory, extensions=[".txt", ".md"]):
     """Find all files in a directory with specified extensions.
 
+    This function expands a directory path into a list of file paths.
+
     Args:
         directory (str): The directory path to search.
         extensions (list): List of file extensions to include.
 
     Returns:
-        list: A sorted list of file paths matching the extensions.
+        list: A sorted list of file paths matching the extensions (not validated).
     """
     logger.debug(
         f"Expanding directory with directory='{directory}', extensions='{extensions}'"
@@ -297,32 +299,18 @@ def expand_directory(directory, extensions=[".txt", ".md"]):
     return sorted(matches)
 
 
-def verify_path(path):
-    """Verify that a given path exists and is a file.
-
-    Args:
-        path (str): The file path to verify.
-
-    Returns:
-        str: The verified path.
-
-    Raises:
-        FileNotFoundError: If the path is not a valid file.
-    """
-    logger.debug(f"Verifying path: {path}")
-    if not os.path.isfile(path):
-        raise FileNotFoundError(f"Error: Path is not a file: {path}")
-    return path
 
 
 def expand_bundles(bundle_file):
     """Extract list of files from a bundle file.
 
+    This function expands a bundle file into a list of file paths.
+
     Args:
         bundle_file (str): Path to the bundle file.
 
     Returns:
-        list: A list of valid file paths contained in the bundle.
+        list: A list of file paths contained in the bundle (not validated).
 
     Raises:
         BundleError: If bundle file not found or contains no valid files.
@@ -335,34 +323,63 @@ def expand_bundles(bundle_file):
         raise BundleError(f"Bundle file not found: {bundle_file}")
 
     expanded_files = []
-    for line in lines:
-        if not os.path.isfile(line):
-            logger.warning(f"File not found in bundle: {line}")  # Log the missing file
-        else:
-            expanded_files.append(line)
-
-    if not expanded_files:
-        raise BundleError(f"No valid files found in bundle: {bundle_file}")
+    for line in [l for l in lines if l and not l.startswith('#')]:
+        expanded_files.append(line)
+    
+    # Note: validation is now done separately
 
     return expanded_files
 
 
-def get_source_files(source):
-    """Get list of source files based on the type of input.
+def expand_args(args):
+    """Expand a list of arguments into a flattened list of file paths.
+
+    This function expands a list of arguments (file paths, directory paths, or bundle files)
+    into a flattened list of file paths by calling the appropriate expander for each argument.
 
     Args:
-        source (str): A file path, directory path, or bundle file.
+        args (list): A list of file paths, directory paths, or bundle files.
 
     Returns:
-        list: A list of source file paths.
+        list: A flattened list of file paths (not validated).
     """
-    logger.debug(f"Getting source files for: {source}")
-    if os.path.isdir(source):
-        return sorted(expand_directory(source))
-    elif is_bundle_file(source):
-        return expand_bundles(source)
-    else:
-        return [source]
+    logger.debug(f"Expanding arguments: {args}")
+
+    def expand_single_arg(arg):
+        """Helper function to expand a single argument."""
+        logger.debug(f"Expanding argument: {arg}")
+        if os.path.isdir(arg):  # Directory path
+            return expand_directory(arg)
+        elif is_bundle_file(arg):  # Bundle file
+            return expand_bundles(arg)
+        else:
+            return [arg]  # Regular file path
+    
+    # Use list comprehension with sum to flatten the list of lists
+    return sum([expand_single_arg(arg) for arg in args], [])
+
+def verify_path(path):
+    """Verify that a given path exists, is readable, and is not a directory.
+
+    Args:
+        path (str): The file path to verify.
+
+    Returns:
+        str: The verified path.
+
+    Raises:
+        FileNotFoundError: If the path does not exist.
+        PermissionError: If the file is not readable.
+        IsADirectoryError: If the path is a directory.
+    """
+    logger.debug(f"Verifying file path: {path}")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Error: Path does not exist: {path}")
+    if not os.access(path, os.R_OK):
+        raise PermissionError(f"Error: File is not readable: {path}")
+    if os.path.isdir(path):
+        raise IsADirectoryError(f"Error: Path is a directory, not a file: {path}")
+    return path
 
 
 def process_file(
@@ -603,18 +620,15 @@ def init(
     logger.debug(
         f"Initializing with sources: {srcs}, verbose: {verbose}, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}"
     )
-
-    verified_sources = []
-    for source in srcs:
-        try:
-            for file in get_source_files(source):
-                verified_sources.append(verify_path(file))
-        except BundleError as e:
-            return f"{e}"
-        except FileNotFoundError as e:
-            print(e)
-            sys.exit(1)
-
+    
+    # Phase 1: Expand all arguments into a flat list of file paths
+    expanded_files = expand_args(srcs)
+    
+    if not expanded_files:
+        return "Error: No source files found."
+    
+    # Phase 2: Validate all file paths
+    verified_sources = [verify_path(file_path) for file_path in expanded_files]
     if not verified_sources:
         return "Error: No valid source files found."
 
