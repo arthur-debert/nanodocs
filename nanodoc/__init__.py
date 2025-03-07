@@ -4,6 +4,8 @@ from .nanodoc import (
     LINE_WIDTH,
     BundleError,
     setup_logging,
+    apply_style_to_filename,
+    apply_sequence_to_text,
     create_header,
     expand_directory,
     verify_path,
