@@ -187,13 +187,6 @@ def process_all(verified_sources, line_number_mode, generate_toc):
     output_buffer = ""
     line_counter = 0
 
-    toc = ""
-    if generate_toc:
-        toc += create_header("TOC") + "\n"
-        for source_file in verified_sources:
-            toc += f"{os.path.basename(source_file)}\n"
-        toc += "\n"
-
     # Custom sort to ensure .txt files come before .md files when base names match
     def file_sort_key(path):
         base_name = os.path.splitext(os.path.basename(path))[0]
@@ -205,6 +198,50 @@ def process_all(verified_sources, line_number_mode, generate_toc):
     # Sort the verified sources with custom sorting
     verified_sources = sorted(verified_sources, key=file_sort_key)
 
+    # Pre-calculate line numbers for TOC if needed
+    toc_line_numbers = {}
+    current_line = 0
+    
+    if generate_toc:
+        # Calculate the size of the TOC header
+        toc_header_lines = 2  # Header line + blank line
+        
+        # Calculate the size of each TOC entry (filename + line number)
+        toc_entries_lines = len(verified_sources)
+        
+        # Add blank line after TOC
+        toc_footer_lines = 1
+        
+        # Total TOC size
+        toc_size = toc_header_lines + toc_entries_lines + toc_footer_lines
+        current_line = toc_size
+        
+        # Calculate line numbers for each file
+        for source_file in verified_sources:
+            toc_line_numbers[source_file] = current_line + 1  # +1 for the file header
+            with open(source_file, 'r') as f:
+                file_lines = len(f.readlines())
+            current_line += file_lines + 1  # +1 for the file header
+
+    # Create TOC with line numbers
+    toc = ""
+    if generate_toc:
+        toc += create_header("TOC") + "\n"
+        max_filename_length = max(len(os.path.basename(file)) for file in verified_sources)
+        
+        for source_file in verified_sources:
+            filename = os.path.basename(source_file)
+            line_num = toc_line_numbers[source_file]
+            # Format the TOC entry with dots aligning the line numbers
+            dots = "." * (max_filename_length - len(filename) + 5)
+            toc += f"{filename} {dots} {line_num}\n"
+        
+        toc += "\n"
+
+    # Reset line counter for actual file processing
+    line_counter = 0
+    
+    # Process each file
     for source_file in verified_sources:
         if line_number_mode == "file":
             line_counter = 0
