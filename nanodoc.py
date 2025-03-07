@@ -88,11 +88,13 @@ import glob
 import sys
 import logging
 
+# Version and configuration constants
 VERSION = "0.1.0"
 LINE_WIDTH = 80
 
 # Custom exception for bundle file errors
 class BundleError(Exception):
+    """Custom exception for handling errors related to bundle files."""
     pass
 
 # Initialize logger at the module level - disabled by default
@@ -100,7 +102,15 @@ logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
 
 def setup_logging(to_stderr=False, enabled=False):
-    """Configure logging based on requirements"""
+    """Configure logging based on requirements.
+    
+    Args:
+        to_stderr (bool): If True, logs to stderr instead of stdout.
+        enabled (bool): If True, sets logging level to DEBUG, otherwise CRITICAL.
+        
+    Returns:
+        logger: Configured logging object.
+    """
     global logger
     if not logger.hasHandlers():  # Only set up logging once
         # Set initial log level
@@ -120,6 +130,15 @@ def setup_logging(to_stderr=False, enabled=False):
     return logger
 
 def create_header(text, char="#"):
+    """Create a formatted header with the given text.
+    
+    Args:
+        text (str): The text to include in the header.
+        char (str): The character to use for the header border.
+        
+    Returns:
+        str: A formatted header string with the text centered.
+    """
     logger.debug(f"Creating header with text='{text}', char='{char}'")
     padding = (LINE_WIDTH - len(text) - 2) // 2
     header = char * padding + " " + text + " " + char * padding
@@ -128,6 +147,15 @@ def create_header(text, char="#"):
     return header
 
 def expand_directory(directory, extensions=[".txt", ".md"]):
+    """Find all files in a directory with specified extensions.
+    
+    Args:
+        directory (str): The directory path to search.
+        extensions (list): List of file extensions to include.
+        
+    Returns:
+        list: A sorted list of file paths matching the extensions.
+    """
     logger.debug(f"Expanding directory with directory='{directory}', extensions='{extensions}'")
     matches = []
     for root, _, filenames in os.walk(directory):
@@ -136,15 +164,35 @@ def expand_directory(directory, extensions=[".txt", ".md"]):
                 matches.append(os.path.join(root, filename))
     return sorted(matches)
 
-
 def verify_path(path):
+    """Verify that a given path exists and is a file.
+    
+    Args:
+        path (str): The file path to verify.
+        
+    Returns:
+        str: The verified path.
+        
+    Raises:
+        FileNotFoundError: If the path is not a valid file.
+    """
     logger.debug(f"Verifying path: {path}")
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Error: Path is not a file: {path}")
     return path
 
-
 def expand_bundles(bundle_file):
+    """Extract list of files from a bundle file.
+    
+    Args:
+        bundle_file (str): Path to the bundle file.
+        
+    Returns:
+        list: A list of valid file paths contained in the bundle.
+        
+    Raises:
+        BundleError: If bundle file not found or contains no valid files.
+    """
     logger.debug(f"Expanding bundles from file: {bundle_file}")
     try:
         with open(bundle_file, "r") as f:
@@ -164,8 +212,15 @@ def expand_bundles(bundle_file):
 
     return expanded_files
 
-
 def get_source_files(source):
+    """Get list of source files based on the type of input.
+    
+    Args:
+        source (str): A file path, directory path, or bundle file.
+        
+    Returns:
+        list: A list of source file paths.
+    """
     logger.debug(f"Getting source files for: {source}")
     if os.path.isdir(source):
         return sorted(expand_directory(source))
@@ -175,6 +230,17 @@ def get_source_files(source):
         return [source]
 
 def process_file(file_path, line_number_mode, line_counter):
+    """Process a single file and format its content.
+    
+    Args:
+        file_path (str): The path of the file to process.
+        line_number_mode (str): The line numbering mode ('file', 'all', or None).
+        line_counter (int): The current global line counter.
+        
+    Returns:
+        tuple: (str, int) Processed file content with header and line numbers,
+               and the number of lines in the file.
+    """
     logger.debug(f"Processing file: {file_path}, line_number_mode: {line_number_mode}, line_counter: {line_counter}")
     try:
         with open(file_path, "r") as f:
@@ -195,12 +261,23 @@ def process_file(file_path, line_number_mode, line_counter):
     return output, len(lines)
 
 def process_all(verified_sources, line_number_mode, generate_toc):
+    """Process all source files and combine them.
+    
+    Args:
+        verified_sources (list): List of verified source file paths.
+        line_number_mode (str): Line numbering mode ('file', 'all', or None).
+        generate_toc (bool): Whether to generate a table of contents.
+        
+    Returns:
+        str: The combined content of all files with formatting.
+    """
     logger.debug(f"Processing all files, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}")
     output_buffer = ""
     line_counter = 0
 
     # Custom sort to ensure .txt files come before .md files when base names match
     def file_sort_key(path):
+        """Key function for sorting files by name then extension priority."""
         base_name = os.path.splitext(os.path.basename(path))[0]
         ext = os.path.splitext(path)[1]
         # This ensures test_file.txt comes before test_file.md
@@ -267,9 +344,16 @@ def process_all(verified_sources, line_number_mode, generate_toc):
     return output_buffer
 
 def is_bundle_file(file_path):
-    """
-    Determine if a file is a bundle file by checking if its lines look like file paths.
-    A file is considered a bundle if its first non-empty line points to an existing file.
+    """Determine if a file is a bundle file by checking its contents.
+    
+    A file is considered a bundle if its first non-empty, non-comment line 
+    points to an existing file.
+    
+    Args:
+        file_path (str): The path to the file to check.
+        
+    Returns:
+        bool: True if the file appears to be a bundle file, False otherwise.
     """
     logger.debug(f"Checking if {file_path} is a bundle file")
     try:
@@ -294,6 +378,17 @@ def is_bundle_file(file_path):
         return False
 
 def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
+    """Initialize and process the sources.
+    
+    Args:
+        srcs (list): List of source file paths, directories, or bundle files.
+        verbose (bool): Whether to enable verbose logging.
+        line_number_mode (str): Line numbering mode ('file', 'all', or None).
+        generate_toc (bool): Whether to generate a table of contents.
+        
+    Returns:
+        str: The processed output.
+    """
     logger.debug(f"Initializing with sources: {srcs}, verbose: {verbose}, line_number_mode: {line_number_mode}, generate_toc: {generate_toc}")
     
     verified_sources = []
@@ -314,6 +409,22 @@ def init(srcs, verbose=False, line_number_mode=None, generate_toc=False):
     return output
 
 def to_stds(srcs, verbose=False, line_number_mode=None, generate_toc=False):
+    """Process sources and return the result as a string.
+    
+    This function handles setting up logging and error handling.
+    
+    Args:
+        srcs (list): List of source file paths, directories, or bundle files.
+        verbose (bool): Whether to enable verbose logging.
+        line_number_mode (str): Line numbering mode ('file', 'all', or None).
+        generate_toc (bool): Whether to generate a table of contents.
+        
+    Returns:
+        str: The processed output.
+        
+    Raises:
+        Exception: Any error encountered during processing.
+    """
     # Enable logging only when verbose is True
     setup_logging(to_stderr=True, enabled=verbose)
     try:    
