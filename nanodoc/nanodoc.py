@@ -385,15 +385,32 @@ def process_all(verified_sources, line_number_mode, generate_toc, show_header=Tr
     # Create TOC with line numbers
     toc = ""
     if generate_toc:
-        toc += "\n" + create_header("TOC", header_seq=None) + "\n\n"
-        max_filename_length = max(len(os.path.basename(file)) for file in verified_sources)
+        toc += "\n" + create_header("TOC", header_seq=None, header_style=header_style) + "\n\n"
+        
+        # Format filenames according to header style
+        formatted_filenames = {}
+        for source_file in verified_sources:
+            basename = os.path.basename(source_file)
+            if header_style == "path":
+                formatted_filenames[source_file] = source_file
+            elif header_style == "nice":
+                # Use the same formatting as in create_header
+                filename = os.path.basename(source_file)
+                basename = os.path.splitext(filename)[0]
+                nice_name = re.sub(r'[-_]', ' ', basename)
+                nice_name = nice_name.title()
+                formatted_filenames[source_file] = f"{nice_name} ({filename})"
+            else:  # default or "filename"
+                formatted_filenames[source_file] = basename
+        
+        max_filename_length = max(len(formatted_name) for formatted_name in formatted_filenames.values())
 
         for source_file in verified_sources:
-            filename = os.path.basename(source_file)
+            formatted_name = formatted_filenames[source_file]
             line_num = toc_line_numbers[source_file]
             # Format the TOC entry with dots aligning the line numbers
-            dots = "." * (max_filename_length - len(filename) + 5)
-            toc += f"{filename} {dots} {line_num}\n"
+            dots = "." * (max_filename_length - len(formatted_name) + 5)
+            toc += f"{formatted_name} {dots} {line_num}\n"
 
         toc += "\n"
 
