@@ -66,7 +66,7 @@ def test_init_toc(tmpdir):
     assert "Line 1" in result
     assert "Line 2" in result
 
-@pytest.mark.skip(reason=)
+@pytest.mark.skip(reason="Not implemented")
 def test_init_bundle_error(tmpdir):
     # Create a test bundle file with non-existent paths
     bundle_file = tmpdir.join("test_bundle.txt")
