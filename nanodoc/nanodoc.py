@@ -131,10 +131,10 @@ def apply_style_to_filename(filename, style, original_path=None):
         str: The styled filename.
     """
     logger.debug(f"Applying style '{style}' to filename '{filename}'")
-    
+
     if not style or style == "filename" or not original_path:
         return filename
-    
+
     if style == "path":
         # Use the full file path
         return original_path
@@ -150,36 +150,26 @@ def apply_style_to_filename(filename, style, original_path=None):
 
         # Add filename in parentheses
         return f"{nice_name} ({filename})"
-    
+
     # Default to filename if style is not recognized
     return filename
 
 
 def to_roman(num):
     """Convert integer to roman numeral.
-    
+
     Args:
         num (int): A positive integer to convert.
-        
+
     Returns:
         str: Roman numeral representation of the input.
     """
     if not isinstance(num, int) or num <= 0:
         raise ValueError("Input must be a positive integer")
-    
-    val = [
-        1000, 900, 500, 400,
-        100, 90, 50, 40,
-        10, 9, 5, 4,
-        1
-    ]
-    syms = [
-        "M", "CM", "D", "CD",
-        "C", "XC", "L", "XL",
-        "X", "IX", "V", "IV",
-        "I"
-    ]
-    
+
+    val = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+    syms = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+
     roman_num = ""
     i = 0
     while num > 0:
@@ -190,42 +180,35 @@ def to_roman(num):
     return roman_num.lower()
 
 
-def format_pos(position, seq_index):
+def format_pos(style, position):
     """Format the sequence prefix based on the sequence type.
 
     Args:
-        sequence (str): The sequence type (numerical, letter, roman).
-        seq_index (int): The index of the item in the sequence.
+        style (str): The sequence type (numerical, letter, roman).
+        position (int): The index of the item in the sequence.
 
     Returns:
         str: The formatted sequence prefix.
     """
-    if not position:
+    if not style:
         return ""
-    
+
     # Calculate one-indexed number first
-    one_indexed = seq_index + 1
-    
-    # Apply formatting based on sequence type
-    if position == "numerical":
-        return f"{int(one_indexed)}. "
-    elif position == "letter":
-        # Convert to lowercase letter (a=1, b=2, etc.)
-        letter = chr(96 + ((one_indexed - 1) % 26) + 1)
-        return f"{letter}. "
-    elif position == "roman":
-        return f"{to_roman(one_indexed)}. "
-    
-    # Default case if sequence is not recognized
-    return ""
+    pos_one_indexed = position + 1
+
+    # Dictionary mapping styles to formatting functions
+    style_formatters = {
+        "numerical": lambda n: f"{int(n)}. ",
+        "letter": lambda n: f"{chr(96 + ((n - 1) % 26) + 1)}. ",
+        "roman": lambda n: f"{to_roman(n)}. ",
+    }
+
+    # Use the appropriate formatter or return empty string if style not found
+    return style_formatters.get(style, lambda _: "")(pos_one_indexed)
 
 
 def apply_sequence_to_text(text, sequence, seq_index):
-    """Apply the specified sequence to text.
-
-    """
-
-    logger.debug(f"Applying sequence '{sequence}' to text '{text}' with index {seq_index}")
+    """Apply the specified sequence to text."""
     prefix = format_pos(sequence, seq_index)
     return prefix + text if prefix else text
 
@@ -277,17 +260,18 @@ def create_header(
     Returns:
         str: A formatted header string with the text centered.
     """
-    logger.debug(f"Creating header with text='{text}', char='{char}'")
-
     # Apply style to the text if original_path is provided
     if original_path:
         filename = os.path.basename(original_path)
         styled_text = apply_style_to_filename(filename, style, original_path)
     else:
         styled_text = text
-    
+
     # Apply sequence to the styled text
     header = apply_sequence_to_text(styled_text, sequence, seq_index)
+    logger.debug(
+        f"Creating header with text='{text}', char='{char}', final: '{header}'"
+    )
 
     return header
 
@@ -508,17 +492,15 @@ def process_all(
     # Create TOC with line numbers
     toc = ""
     if generate_toc:
-        toc += (
-            "\n"
-            + create_header("TOC", sequence=None, style=style)
-            + "\n\n"
-        )
+        toc += "\n" + create_header("TOC", sequence=None, style=style) + "\n\n"
 
         # Format filenames according to header style
         formatted_filenames = {}
         for source_file in verified_sources:
             filename = os.path.basename(source_file)
-            formatted_filenames[source_file] = apply_style_to_filename(filename, style, source_file)
+            formatted_filenames[source_file] = apply_style_to_filename(
+                filename, style, source_file
+            )
 
         max_filename_length = max(
             len(formatted_name) for formatted_name in formatted_filenames.values()
