@@ -702,7 +702,12 @@ def init(
     return output
 
 
-if __name__ == "__main__":
+def parse_args():
+    """Parse command-line arguments.
+    
+    Returns:
+        argparse.Namespace: The parsed arguments with processed values.
+    """
     parser = argparse.ArgumentParser(
         description="Generate documentation from source code.",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -737,29 +742,45 @@ if __name__ == "__main__":
         default=None,
         choices=["help"],
     )
-
+    
     args = parser.parse_args()
+    
+    # Process line numbering mode
+    if args.n == 0:
+        args.line_number_mode = None
+    elif args.n == 1:
+        args.line_number_mode = "file"
+    else:  # args.n >= 2
+        args.line_number_mode = "all"
+        
+    return args
 
+def _check_help(args):
     # Handle help command before any logging occurs
     if args.help == "help" or (len(sys.argv) == 2 and sys.argv[1] == "help"):
         print(__doc__)
         sys.exit(0)
 
     if not args.sources and args.help is None:
+        parser = argparse.ArgumentParser(
+            description="Generate documentation from source code.",
+            formatter_class=argparse.RawTextHelpFormatter,
+        )
         parser.print_usage()
         sys.exit(0)
 
-    line_number_mode = None
-    if args.n == 1:
-        line_number_mode = "file"
-    elif args.n >= 2:
-        line_number_mode = "all"
-
+def main():
+    """Main entry point for the nanodoc application."""
+    args = parse_args()
+    # short circuit for help
+    _check_help(args)
+    
+    
     try:
         output = to_stds(
             srcs=args.sources,
             verbose=args.v,
-            line_number_mode=line_number_mode,
+            line_number_mode=args.line_number_mode,  # Use the pre-processed line_number_mode
             generate_toc=args.toc,
             show_header=not args.no_header,
             sequence=args.sequence,
@@ -769,3 +790,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"An error occurred: {e}")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
