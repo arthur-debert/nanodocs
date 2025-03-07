@@ -36,12 +36,12 @@ def test_process_all_with_header_sequence(tmpdir):
     file_paths = [str(test_file1), str(test_file2)]
     
     # Test numerical sequence
-    output = process_all(file_paths, None, False, header_seq="numerical")
+    output = process_all(file_paths, None, False, sequence="numerical")
     assert "1. test_file1.txt" in output
     assert "2. test_file2.txt" in output
     
     # Test letter sequence
-    output = process_all(file_paths, None, False, header_seq="letter")
+    output = process_all(file_paths, None, False, sequence="letter")
     assert "a. test_file1.txt" in output
     assert "b. test_file2.txt" in output
 
@@ -50,6 +50,6 @@ def test_process_all_with_header_style(tmpdir):
     test_file1.write("Line 1")
     file_paths = [str(test_file1)]
     
-    output = process_all(file_paths, None, False, header_style="nice")
+    output = process_all(file_paths, None, False, style="nice")
     assert "Test File1 (test_file1.txt)" in output
 

@@ -63,11 +63,11 @@ nanodocs offers three ways to specify the files you want to bundle:
 - `-nn`: Enable global line numbering (001, 002, etc.)
 - `--toc`: Include a table of contents at the beginning
 | - `--no-header`: Hide file headers completely
-| - `--header-seq`: Add sequence numbers to headers
+| - `--sequence`: Add sequence numbers to headers
 |   - `numerical`: Use numbers (1., 2., etc.)
 |   - `letter`: Use letters (a., b., etc.)
 |   - `roman`: Use roman numerals (i., ii., etc.)
-| - `--header-style`: Change how filenames are displayed
+| - `--style`: Change how filenames are displayed
 |   - `filename`: Just the filename
 |   - `path`: Full file path
 |   - `nice` (default): Formatted title (removes extension, replaces - and _ with spaces, title case, adds original filename in parentheses)
@@ -89,8 +89,8 @@ nanodocs -nn --toc                           # Bundle all files with TOC and glo
 nanodocs --toc -v                            # Verbose bundle with TOC
 nanodocs some_directory                      # Add all files in directory
 | nanodocs --no-header file1.txt file2.txt     # Hide headers
-| nanodocs --header-seq=roman file1.txt        # Use roman numerals (i., ii., etc.)
-| nanodocs --header-style=filename file1.txt   # Use filename style instead of nice (default)
+| nanodocs --sequence=roman file1.txt        # Use roman numerals (i., ii., etc.)
+| nanodocs --style=filename file1.txt   # Use filename style instead of nice (default)
 nanodocs  bundle_file                         # bundle_file is a txt docuument with files paths on lines
 ```
 
@@ -152,16 +152,16 @@ def setup_logging(to_stderr=False, enabled=False):
 
 
 def create_header(
-    text, char="#", header_seq=None, seq_index=0, header_style=None, original_path=None
+    text, char="#", sequence=None, seq_index=0, style=None, original_path=None
 ):
     """Create a formatted header with the given text.
 
     Args:
         text (str): The text to include in the header.
         char (str): The character to use for the header border.
-        header_seq (str): The header sequence type (numerical, letter, roman, or None).
+        sequence (str): The header sequence type (numerical, letter, roman, or None).
         seq_index (int): The index of the file in the sequence.
-        header_style (str): The header style (filename, path, nice, or None).
+        style (str): The header style (filename, path, nice, or None).
         original_path (str): The original file path (used for path and nice styles).
 
     Returns:
@@ -171,11 +171,11 @@ def create_header(
     # padding = (LINE_WIDTH - len(text) - 2) // 2
 
     # Apply header style if specified
-    if header_style and original_path:
-        if header_style == "path":
+    if style and original_path:
+        if style == "path":
             # Use the full file path
             text = original_path
-        elif header_style == "nice":
+        elif style == "nice":
             # Remove extension, replace - and _ with spaces, title case, then add filename in parentheses
             filename = os.path.basename(original_path)
             basename = os.path.splitext(filename)[0]  # Remove extension
@@ -190,18 +190,18 @@ def create_header(
             text = f"{nice_name} ({filename})"
 
     # Apply sequence prefix if header_seq is specified
-    if header_seq:
-        if header_seq == "numerical":
+    if sequence:
+        if sequence == "numerical":
             # Numerical sequence: 1., 2., etc.
             prefix = f"{seq_index + 1}. "
             text = prefix + text
-        elif header_seq == "letter":
+        elif sequence == "letter":
             # Letter sequence: a., b., etc.
             # ASCII 'a' is 97, so we add seq_index to get the right letter
             letter = chr(97 + (seq_index % 26))
             prefix = f"{letter}. "
             text = prefix + text
-        elif header_seq == "roman":
+        elif sequence == "roman":
             # Roman numerals: i., ii., etc.
             roman_numerals = [
                 "i",
@@ -324,9 +324,9 @@ def process_file(
     line_number_mode,
     line_counter,
     show_header=True,
-    header_seq=None,
+    sequence=None,
     seq_index=0,
-    header_style=None,
+    style=None,
 ):
     """Process a single file and format its content.
 
@@ -336,9 +336,9 @@ def process_file(
         line_counter (int): The current global line counter.
 
         show_header (bool): Whether to show the header.
-        header_seq (str): The header sequence type (numerical, letter, roman, or None).
+        sequence (str): The header sequence type (numerical, letter, roman, or None).
         seq_index (int): The index of the file in the sequence.
-        header_style (str): The header style (filename, path, nice, or None).
+        style (str): The header style (filename, path, nice, or None).
     Returns:
         tuple: (str, int) Processed file content with header and line numbers,
                and the number of lines in the file.
@@ -358,9 +358,9 @@ def process_file(
             "\n"
             + create_header(
                 os.path.basename(file_path),
-                header_seq=header_seq,
+                sequence=sequence,
                 seq_index=seq_index,
-                header_style=header_style,
+                style=style,
                 original_path=file_path,
             )
             + "\n\n"
@@ -382,8 +382,8 @@ def process_all(
     line_number_mode,
     generate_toc,
     show_header=True,
-    header_seq=None,
-    header_style=None,
+    sequence=None,
+    style=None,
 ):
     """Process all source files and combine them.
 
@@ -393,8 +393,8 @@ def process_all(
         generate_toc (bool): Whether to generate a table of contents.
 
         show_header (bool): Whether to show headers.
-        header_seq (str): The header sequence type (numerical, letter, roman, or None).
-        header_style (str): The header style (filename, path, nice, or None).
+        sequence (str): The header sequence type (numerical, letter, roman, or None).
+        style (str): The header style (filename, path, nice, or None).
     Returns:
         str: The combined content of all files with formatting.
     """
@@ -448,7 +448,7 @@ def process_all(
     if generate_toc:
         toc += (
             "\n"
-            + create_header("TOC", header_seq=None, header_style=header_style)
+            + create_header("TOC", sequence=None, style=style)
             + "\n\n"
         )
 
@@ -456,9 +456,9 @@ def process_all(
         formatted_filenames = {}
         for source_file in verified_sources:
             basename = os.path.basename(source_file)
-            if header_style == "path":
+            if style == "path":
                 formatted_filenames[source_file] = source_file
-            elif header_style == "nice":
+            elif style == "nice":
                 # Use the same formatting as in create_header
                 filename = os.path.basename(source_file)
                 basename = os.path.splitext(filename)[0]
@@ -493,9 +493,9 @@ def process_all(
             line_number_mode,
             line_counter,
             show_header,
-            header_seq,
+            sequence,
             i,
-            header_style,
+            style,
         )
         output_buffer += file_output
         line_counter += num_lines
@@ -549,8 +549,8 @@ def init(
     line_number_mode=None,
     generate_toc=False,
     show_header=True,
-    header_seq=None,
-    header_style=None,
+    sequence=None,
+    style=None,
 ):
     """Initialize and process the sources.
 
@@ -560,8 +560,8 @@ def init(
         line_number_mode (str): Line numbering mode ('file', 'all', or None).
         generate_toc (bool): Whether to generate a table of contents.
         show_header (bool): Whether to show headers.
-        header_seq (str): The header sequence type (numerical, letter, roman, or None).
-        header_style (str): The header style (filename, path, nice, or None).
+        sequence (str): The header sequence type (numerical, letter, roman, or None).
+        style (str): The header style (filename, path, nice, or None).
 
     Returns:
         str: The processed output.
@@ -589,8 +589,8 @@ def init(
         line_number_mode,
         generate_toc,
         show_header,
-        header_seq,
-        header_style,
+        sequence,
+        style,
     )
     return output
 
@@ -601,8 +601,8 @@ def to_stds(
     line_number_mode=None,
     generate_toc=False,
     show_header=True,
-    header_seq=None,
-    header_style=None,
+    sequence=None,
+    style=None,
 ):
     """Process sources and return the result as a string.
 
@@ -614,8 +614,8 @@ def to_stds(
         line_number_mode (str): Line numbering mode ('file', 'all', or None).
         generate_toc (bool): Whether to generate a table of contents.
         show_header (bool): Whether to show headers.
-        header_seq (str): The header sequence type (numerical, letter, roman, or None).
-        header_style (str): The header style (filename, path, nice, or None).
+        sequence (str): The header sequence type (numerical, letter, roman, or None).
+        style (str): The header style (filename, path, nice, or None).
 
     Returns:
         str: The processed output.
@@ -632,8 +632,8 @@ def to_stds(
             line_number_mode,
             generate_toc,
             show_header,
-            header_seq,
-            header_style,
+            sequence,
+            style,
         )
     except Exception as e:
         raise e
@@ -657,12 +657,12 @@ if __name__ == "__main__":
     parser.add_argument("--toc", action="store_true", help="Generate table of contents")
     parser.add_argument("--no-header", action="store_true", help="Hide file headers")
     parser.add_argument(
-        "--header-seq",
+        "--sequence",
         choices=["numerical", "letter", "roman"],
         help="Add sequence numbers to headers (numerical, letter, or roman)",
     )
     parser.add_argument(
-        "--header-style",
+        "--style",
         choices=["filename", "path", "nice"],
         default="nice",
         help="Header style: nice (default, formatted title), filename (just filename), or path (full path)",
@@ -702,8 +702,8 @@ if __name__ == "__main__":
             line_number_mode=line_number_mode,
             generate_toc=args.toc,
             show_header=not args.no_header,
-            header_seq=args.header_seq,
-            header_style=args.header_style,
+            sequence=args.sequence,
+            style=args.style,
         )
         print(output)
     except Exception as e:

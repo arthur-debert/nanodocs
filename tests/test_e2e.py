@@ -41,10 +41,10 @@ def test_e2e_with_nn_and_toc():
     assert result.returncode == 0
     
     # Calculate expected output parts (headers)
-    toc_header = create_header("TOC", header_style="filename")
-    cake_header = create_header("cake.txt", header_style="filename")
-    incident_header = create_header("incident.txt", header_style="filename")
-    telephone_header = create_header("new-telephone.txt", header_style="filename")
+    toc_header = create_header("TOC", style="filename")
+    cake_header = create_header("cake.txt", style="filename")
+    incident_header = create_header("incident.txt", style="filename")
+    telephone_header = create_header("new-telephone.txt", style="filename")
     
     # Count lines in sample files to build expectations
     with open(SAMPLE_FILES[0], 'r') as f:
@@ -126,8 +126,8 @@ def test_e2e_bundle_with_nn_and_toc(tmpdir):
     assert result.returncode == 0
     
     # Calculate expected output parts
-    toc_header = create_header("TOC", header_style="filename")
-    cake_header = create_header("cake.txt", header_style="filename")
+    toc_header = create_header("TOC", style="filename")
+    cake_header = create_header("cake.txt", style="filename")
     
     # Extract just the important parts of the output
     output_lines = result.stdout.split("\n")

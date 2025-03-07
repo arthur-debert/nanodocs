@@ -76,7 +76,7 @@ def test_init_bundles_toc(tmpdir):
     result = init([str(bundle_file)], generate_toc=True)
 
     # Assert that the TOC is generated and the file content is printed
-    assert create_header("TOC", header_style="filename") in result
+    assert create_header("TOC", style="filename") in result
     assert "test_file1.txt" in result
     assert "test_file2.txt" in result
     assert "Line 1" in result

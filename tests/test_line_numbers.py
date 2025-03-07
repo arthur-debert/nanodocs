@@ -57,15 +57,15 @@ def test_process_file_with_header_sequence(tmpdir):
     file_path = str(test_file)
     
     # Test numerical sequence
-    output, _ = process_file(file_path, None, 0, header_seq="numerical", seq_index=0)
+    output, _ = process_file(file_path, None, 0, sequence="numerical", seq_index=0)
     assert "\n1. test_file.txt\n\n" in output
     
     # Test letter sequence
-    output, _ = process_file(file_path, None, 0, header_seq="letter", seq_index=1)
+    output, _ = process_file(file_path, None, 0, sequence="letter", seq_index=1)
     assert "\nb. test_file.txt\n\n" in output
     
     # Test roman sequence
-    output, _ = process_file(file_path, None, 0, header_seq="roman", seq_index=2)
+    output, _ = process_file(file_path, None, 0, sequence="roman", seq_index=2)
     assert "\niii. test_file.txt\n\n" in output
 
 def test_process_file_with_header_style(tmpdir):
@@ -74,6 +74,6 @@ def test_process_file_with_header_style(tmpdir):
     file_path = str(test_file)
     
     # Test nice style with sequence
-    output, _ = process_file(file_path, None, 0, header_seq="numerical", seq_index=0, header_style="nice")
+    output, _ = process_file(file_path, None, 0, sequence="numerical", seq_index=0, style="nice")
     assert "\n1. Test File (test_file.txt)\n\n" in output
 
