@@ -52,6 +52,42 @@ if python package-managers/brew/pypi-to-brew "${PACKAGE_NAME}" | grep -v "Collec
     echo "✅ Formula tests completed successfully."
     echo "To install the formula locally, you can run:"
     echo "  brew install --build-from-source package-managers/brew/Formula/${PACKAGE_NAME}.rb"
+
+    # Check if we're in a GitHub repository and gh CLI is available
+    if command -v gh &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
+      echo ""
+      echo "Would you like to trigger a GitHub workflow to update the Homebrew formula? (y/n)"
+      read -r TRIGGER_WORKFLOW
+
+      if [[ ${TRIGGER_WORKFLOW} == "y" || ${TRIGGER_WORKFLOW} == "Y" ]]; then
+        # Get the current branch
+        BRANCH=$(git branch --show-current)
+
+        echo "Triggering Homebrew formula update workflow on branch ${BRANCH}..."
+        gh workflow run update-homebrew-formula.yml --ref "${BRANCH}"
+
+        # Wait a moment for the workflow to be registered
+        echo "Waiting for workflow to start..."
+        sleep 2
+
+        # Get the run ID of the latest workflow
+        RUN_ID=$(gh run list --workflow="Update Homebrew Formula" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+        # Display the status of the workflow run
+        echo "Latest workflow run status:"
+        echo ""
+        gh run list --workflow="Update Homebrew Formula" --limit 1
+
+        if [[ -n ${RUN_ID} ]]; then
+          echo ""
+          echo "You can check the detailed status with:"
+          echo "gh run view ${RUN_ID}"
+          echo ""
+          echo "Watching workflow progress in real-time..."
+          gh run watch "${RUN_ID}"
+        fi
+      fi
+    fi
   else
     echo "Error: Generated formula is empty. Keeping the existing formula."
     exit 1

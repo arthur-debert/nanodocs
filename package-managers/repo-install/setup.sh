@@ -57,7 +57,7 @@ EOF
 done
 
 # Create wrapper scripts for common scripts
-for script in about-py-package package-update pypi-new-release; do
+for script in about-py-package package-update pypi-new-release trigger-workflow; do
   echo "Creating wrapper for $script..."
   cat >"$REPO_ROOT/bin/$script" <<EOF
 #!/bin/bash

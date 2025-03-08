@@ -50,6 +50,7 @@ your-repo/
 │   ├── brew-update
 │   ├── test-apt-package.sh
 │   ├── test-brew-formula.sh
+│   ├── trigger-workflow          # Common workflow trigger script
 │   └── ...
 ├── Formula -> package-managers/brew/Formula  # Symlink
 └── package-managers/
@@ -61,6 +62,7 @@ your-repo/
     │   └── ...
     ├── common/                    # Shared scripts
     │   ├── about-py-package
+    │   ├── trigger-workflow      # Common workflow trigger script
     │   └── ...
     ├── debian/                    # Debian/APT-related files
     │   ├── apt-update
@@ -70,3 +72,21 @@ your-repo/
         ├── README.md
         └── setup.sh
 ```
+
+## Common Workflow Trigger Script
+
+The `trigger-workflow` script provides a unified way to trigger GitHub Actions
+workflows for both Homebrew and APT package updates. It can be used directly or
+through the specialized wrapper scripts:
+
+```bash
+# Trigger a workflow directly
+bin/trigger-workflow --workflow-name "Update Homebrew Formula" --package-name "nanodoc"
+
+# Or use the specialized wrapper scripts
+bin/brew-update  # Triggers the Homebrew formula update workflow
+bin/apt-update   # Triggers the APT package update workflow
+```
+
+The common script ensures consistent behavior across different package types and
+provides a terminal-based interface for tracking workflow progress.
