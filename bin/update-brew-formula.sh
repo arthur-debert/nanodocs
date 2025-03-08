@@ -28,7 +28,7 @@ echo "Generating Homebrew formula for ${PACKAGE_NAME}..."
 TEMP_FILE=$(mktemp)
 
 # Run the script and capture the output
-if python bin/pypi-to-brew "${PACKAGE_NAME}" | grep -v "Collecting\|Installing\|Successfully\|cached\|notice" >"$TEMP_FILE"; then
+if python bin/pypi-to-brew "${PACKAGE_NAME}" | grep -v "Collecting\|Installing\|Successfully\|cached\|notice\|Downloading" >"$TEMP_FILE"; then
   # Check if the output is not empty
   if [ -s "$TEMP_FILE" ]; then
     # Copy the output to the formula file
