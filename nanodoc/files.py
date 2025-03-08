@@ -6,34 +6,168 @@
 
 import logging
 import os
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
 
 logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
 
 
-def parse_line_reference(line_ref):
-    """Parse a line reference string into a list of (start, end) tuples.
+@dataclass
+class LineRange:
+    """A class representing a range of lines in a file.
+
+    Attributes:
+        start (int): The start line number (1-indexed).
+        end (Union[int, str]): The end line number (1-indexed) or 'X' for end of file.
+    """
+
+    start: int
+    end: Union[int, str]  # Can be an integer or 'X' for end of file
+
+    def is_single_line(self) -> bool:
+        """Check if this range represents a single line."""
+        return self.start == self.end and isinstance(self.end, int)
+
+    def is_full_file(self) -> bool:
+        """Check if this range represents the entire file."""
+        return self.start == 1 and self.end == "X"
+
+    def normalize(self, max_lines: int) -> Tuple[int, int]:
+        """Convert to actual line numbers based on file length.
+
+        Args:
+            max_lines (int): The total number of lines in the file.
+
+        Returns:
+            tuple: A tuple of (start, end) line numbers.
+        """
+        end = max_lines if self.end == "X" else self.end
+        return (self.start, end)
+
+    def to_string(self) -> str:
+        """Convert to string representation for display."""
+        if self.is_single_line():
+            return f"L{self.start}"
+        elif self.end == "X":
+            return f"L{self.start}-X"
+        else:
+            return f"L{self.start}-{self.end}"
+
+
+@dataclass
+class ContentItem:
+    """A class representing a file and its line ranges.
+
+    Attributes:
+        original_arg (str): The original argument used to specify this content.
+        file_path (str): The path to the file.
+        ranges (List[LineRange]): A list of LineRange objects.
+        content (Optional[str]): The cached content from the file.
+    """
+
+    original_arg: str
+    file_path: str
+    ranges: List[LineRange]
+    content: Optional[str] = None
+
+    def validate(self) -> bool:
+        """Validate that the file exists and ranges are valid.
+
+        Returns:
+            bool: True if the content item is valid.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            PermissionError: If the file is not readable.
+            IsADirectoryError: If the path is a directory.
+            ValueError: If a line reference is invalid or out of range.
+        """
+        # Check file existence and readability
+        if not os.path.exists(self.file_path):
+            raise FileNotFoundError(f"File not found: {self.file_path}")
+        if not os.access(self.file_path, os.R_OK):
+            raise PermissionError(f"File is not readable: {self.file_path}")
+        if os.path.isdir(self.file_path):
+            raise IsADirectoryError(
+                f"Path is a directory, not a file: {self.file_path}"
+            )
+
+        # Validate ranges against file content
+        with open(self.file_path, "r") as f:
+            lines = f.readlines()
+
+        max_lines = len(lines)
+        for range_obj in self.ranges:
+            start, end = range_obj.normalize(max_lines)
+            if start <= 0 or end <= 0 or start > max_lines or end > max_lines:
+                raise ValueError(
+                    f"Line reference out of range: {range_obj.to_string()} "
+                    f"(file has {max_lines} lines)"
+                )
+            if start > end:
+                raise ValueError(
+                    f"Start line must be less than or equal to end line: {range_obj.to_string()}"
+                )
+
+        return True
+
+    def is_valid(self) -> bool:
+        """Check if the content item is valid without raising exceptions."""
+        try:
+            return self.validate()
+        except Exception:
+            return False
+
+    def load_content(self) -> str:
+        """Load and cache the content from the file."""
+        if self.content is not None:
+            return self.content
+
+        with open(self.file_path, "r") as f:
+            all_lines = f.readlines()
+
+        max_lines = len(all_lines)
+        result = []
+
+        for range_obj in self.ranges:
+            start, end = range_obj.normalize(max_lines)
+            result.extend(all_lines[start - 1 : end])
+
+        self.content = "".join(result).rstrip("\n")
+        return self.content
+
+    def get_content(self) -> str:
+        """Get the content, loading it if necessary."""
+        if self.content is None:
+            return self.load_content()
+        return self.content
+
+
+def parse_line_reference(line_ref: str) -> List[LineRange]:
+    """Parse a line reference string into a list of LineRange objects.
+
+    Supports 'X' as end marker for the last line of a file.
 
     Args:
-        line_ref (str): The line reference string (e.g., "L5", "L10-20",
-                        "L5,L10-20,L30")
+        line_ref (str): The line reference string (e.g., "L5", "L10-20", "L5-X")
 
     Returns:
-        list: A list of (start, end) tuples representing line ranges.
+        list: A list of LineRange objects
 
     Raises:
-        ValueError: If the line reference is invalid.
+        ValueError: If the line reference is invalid
     """
     if not line_ref:
         raise ValueError("Empty line reference")
 
     # Check for invalid characters in the line reference
-    valid_chars = set("L0123456789,-")
+    valid_chars = set("L0123456789,-X")
     for char in line_ref:
         if char not in valid_chars:
             raise ValueError(f"Invalid character in line reference: '{char}'")
 
-    parts = []
+    ranges = []
     for part in line_ref.split(","):
         if not part.startswith("L"):
             raise ValueError(f"Invalid line reference format: {part}")
@@ -48,14 +182,21 @@ def parse_line_reference(line_ref):
                 if len(range_parts) != 2:
                     raise ValueError(f"Invalid range format: {part}")
 
-                start, end = map(int, range_parts)
-                if start <= 0 or end <= 0:
+                start = int(range_parts[0])
+
+                # Handle 'X' as end marker
+                if range_parts[1].upper() == "X":
+                    end = "X"
+                else:
+                    end = int(range_parts[1])
+
+                if start <= 0:
                     raise ValueError(f"Line numbers must be positive: {part}")
-                if start > end:
+                if isinstance(end, int) and (end <= 0 or start > end):
                     raise ValueError(
-                        "Start line must be less than or equal " f"to end line: {part}"
+                        f"Start line must be less than or equal to end line: {part}"
                     )
-                parts.append((start, end))
+                ranges.append(LineRange(start, end))
             except ValueError as e:
                 if "must be positive" in str(e) or "must be less than" in str(e):
                     raise
@@ -69,13 +210,105 @@ def parse_line_reference(line_ref):
                 line_num = int(num_part)
                 if line_num <= 0:
                     raise ValueError(f"Line number must be positive: {part}")
-                parts.append((line_num, line_num))
+                ranges.append(LineRange(line_num, line_num))
             except ValueError as e:
                 if "must be positive" in str(e):
                     raise
                 raise ValueError(f"Invalid line number format: {part}")
 
-    return parts
+    return ranges
+
+
+def convert_line_ranges_to_tuples(
+    line_ranges: List[LineRange], max_lines: int = None
+) -> List[Tuple[int, int]]:
+    """Convert a list of LineRange objects to a list of (start, end) tuples.
+
+    This function is used for backward compatibility with code that expects
+    the old format of line ranges.
+
+    Args:
+        line_ranges (List[LineRange]): A list of LineRange objects
+        max_lines (int, optional): The maximum number of lines in the file
+
+    Returns:
+        List[Tuple[int, int]]: A list of (start, end) tuples
+    """
+    if not line_ranges:
+        return None
+
+    result = []
+    for range_obj in line_ranges:
+        if range_obj.end == "X":
+            if max_lines is not None:
+                result.append((range_obj.start, max_lines))
+            else:
+                # If max_lines is not provided, just use a large number
+                result.append((range_obj.start, 1000000))
+        else:
+            result.append((range_obj.start, range_obj.end))
+    return result
+
+
+def create_content_item(arg: str) -> ContentItem:
+    """Create a ContentItem from a file path and optional line reference.
+
+    Args:
+        arg (str): The file path with optional line reference
+
+    Returns:
+        ContentItem: A ContentItem object
+
+    Raises:
+        ValueError: If the argument format is invalid
+    """
+    # Check if the path includes a line reference
+    file_path = arg
+    line_ref = None
+
+    if ":L" in arg:
+        parts = arg.split(":", 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid path format: {arg}")
+
+        file_path = parts[0]
+        line_spec = parts[1]
+
+        # Ensure the line spec starts with 'L'
+        if not line_spec.startswith("L"):
+            raise ValueError(
+                f"Invalid line reference format: {line_spec} (must start with 'L')"
+            )
+
+        line_ref = line_spec
+
+    # Parse line reference or create a full file reference
+    if line_ref:
+        ranges = parse_line_reference(line_ref)
+    else:
+        # Full file is represented as L1-X
+        ranges = [LineRange(1, "X")]
+
+    return ContentItem(original_arg=arg, file_path=file_path, ranges=ranges)
+
+
+def verify_content(content_item: ContentItem) -> ContentItem:
+    """Verify that a ContentItem is valid.
+
+    Args:
+        content_item (ContentItem): The ContentItem to verify
+
+    Returns:
+        ContentItem: The verified ContentItem
+
+    Raises:
+        FileNotFoundError: If the file does not exist
+        PermissionError: If the file is not readable
+        IsADirectoryError: If the path is a directory
+        ValueError: If a line reference is invalid or out of range
+    """
+    content_item.validate()
+    return content_item
 
 
 def get_file_content(file_path, line=None, start=None, end=None, parts=None):
@@ -96,6 +329,16 @@ def get_file_content(file_path, line=None, start=None, end=None, parts=None):
         FileNotFoundError: If the file does not exist.
         ValueError: If a line reference is out of range.
     """
+    # If parts is a list of LineRange objects, convert it to tuples
+    if parts and isinstance(parts[0], LineRange):
+        with open(file_path, "r") as f:
+            max_lines = len(f.readlines())
+        parts = convert_line_ranges_to_tuples(parts, max_lines)
+
+    # If we have a ContentItem, use its get_content method
+    if isinstance(file_path, ContentItem):
+        return file_path.get_content()
+
     try:
         with open(file_path, "r") as f:
             lines = f.readlines()
@@ -103,7 +346,12 @@ def get_file_content(file_path, line=None, start=None, end=None, parts=None):
         raise FileNotFoundError(f"File not found: {file_path}")
 
     # If no specific parts are requested, return the entire file
-    if line is None and start is None and end is None and parts is None:
+    if (
+        line is None
+        and start is None
+        and end is None
+        and (parts is None or len(parts) == 0)
+    ):
         return "".join(lines)
 
     # Convert to 0-indexed for internal use
@@ -197,7 +445,8 @@ def expand_bundles(bundle_file):
         # If there's a line reference, only read the specified lines
         if line_ref:
             try:
-                parts = parse_line_reference(line_ref)
+                ranges = parse_line_reference(line_ref)
+                parts = convert_line_ranges_to_tuples(ranges)
                 content = get_file_content(file_path, parts=parts)
                 lines = [line.strip() for line in content.splitlines() if line.strip()]
             except ValueError as e:
@@ -349,7 +598,8 @@ def verify_path(path):
     # Validate line reference if present
     if line_ref:
         try:
-            line_parts = parse_line_reference(line_ref)
+            ranges = parse_line_reference(line_ref)
+            line_parts = convert_line_ranges_to_tuples(ranges)
             # Validate that all referenced lines exist in the file
             get_file_content(file_path, parts=line_parts)
         except ValueError as e:
@@ -360,6 +610,8 @@ def verify_path(path):
 
 def file_sort_key(path):
     """Key function for sorting files by name then extension priority."""
+    if isinstance(path, ContentItem):
+        path = path.file_path
     base_name = os.path.splitext(os.path.basename(path))[0]
     ext = os.path.splitext(path)[1]
     # This ensures test_file.txt comes before test_file.md
@@ -368,14 +620,13 @@ def file_sort_key(path):
 
 
 def get_files_from_args(srcs):
-    """Process the sources and return a list of verified file paths.
+    """Process the sources and return a list of ContentItems.
 
     Args:
         srcs (list): List of source file paths, directories, or bundle files.
 
     Returns:
-        list: A list of tuples (file_path, line_parts) where line_parts is a list of
-              (start, end) tuples or None if no line reference.
+        list: A list of ContentItem objects.
 
     Raises:
         FileNotFoundError: If a file path does not exist.
@@ -387,28 +638,16 @@ def get_files_from_args(srcs):
     expanded_files = expand_args(srcs)
     if not expanded_files:
         return []
-    # Phase 2: Validate all file paths
-    verified_sources = []
+
+    # Phase 2: Create and validate ContentItems
+    content_items = []
     for file_path in expanded_files:
-        # Validate the file path and get line parts if present
-        result = verify_path(file_path)
-        # Handle the case where verify_path returns a tuple
-        if isinstance(result, tuple):
-            file_path, line_parts = result
-        else:
-            # If verify_path returns just the path (for backward compatibility)
-            file_path = result
-            # Extract line parts if present
-            line_parts = None
-            if ":L" in file_path:
-                orig_path = file_path
-                file_path = orig_path.split(":L")[0]
-                line_ref = "L" + orig_path.split(":L")[1]
-                try:
-                    line_parts = parse_line_reference(line_ref)
-                except ValueError as e:
-                    raise ValueError(f"Invalid line reference in {orig_path}: {str(e)}")
-        verified_sources.append((file_path, line_parts))
-    # Sort the verified sources with custom sorting
-    verified_sources = sorted(verified_sources, key=lambda x: file_sort_key(x[0]))
-    return verified_sources
+        # Create a ContentItem
+        content_item = create_content_item(file_path)
+        # Validate the ContentItem
+        verify_content(content_item)
+        content_items.append(content_item)
+
+    # Sort the content items
+    content_items.sort(key=lambda x: file_sort_key(x.file_path))
+    return content_items

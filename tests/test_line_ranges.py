@@ -1,24 +1,35 @@
 import pytest
 
-from nanodoc.files import get_file_content, parse_line_reference, verify_path
+from nanodoc.files import (
+    LineRange,
+    create_content_item,
+    get_file_content,
+    parse_line_reference,
+)
 
 
 def test_parse_line_reference_single_line():
     # Test parsing a single line reference
     result = parse_line_reference("L10")
-    assert result == [(10, 10)]
+    assert len(result) == 1
+    assert result[0].start == 10
+    assert result[0].end == 10
 
 
 def test_parse_line_reference_range():
     # Test parsing a range reference
     result = parse_line_reference("L5-10")
-    assert result == [(5, 10)]
+    assert len(result) == 1
+    assert result[0].start == 5
+    assert result[0].end == 10
 
 
 def test_parse_line_reference_multiple():
     # Test parsing multiple references
     result = parse_line_reference("L5,L10-15,L20")
-    assert result == [(5, 5), (10, 15), (20, 20)]
+    assert len(result) == 3
+    assert [r.start for r in result] == [5, 10, 20]
+    assert [r.end for r in result] == [5, 15, 20]
 
 
 def test_parse_line_reference_invalid():
@@ -81,7 +92,8 @@ def test_get_file_content_multiple_parts(tmpdir):
     test_file.write("Line 1\nLine 2\nLine 3\nLine 4\nLine 5")
     file_path = str(test_file)
 
-    content = get_file_content(file_path, parts=[(1, 1), (3, 4)])
+    parts = [LineRange(1, 1), LineRange(3, 4)]
+    content = get_file_content(file_path, parts=parts)
     assert content == "Line 1\nLine 3\nLine 4"
 
 
@@ -103,19 +115,26 @@ def test_verify_path_with_line_reference_valid(tmpdir):
     file_path = str(test_file)
 
     # Valid single line
-    result, line_parts = verify_path(f"{file_path}:L3")
+    content_item = create_content_item(f"{file_path}:L3")
+    result = content_item.file_path
+    line_parts = content_item.ranges
     assert result == file_path
-    assert line_parts == [(3, 3)]
+    assert len(line_parts) == 1
+    assert line_parts[0].start == 3
+    assert line_parts[0].end == 3
 
     # Valid range
-    result, line_parts = verify_path(f"{file_path}:L2-4")
+    content_item = create_content_item(f"{file_path}:L2-4")
+    result = content_item.file_path
+    line_parts = content_item.ranges
     assert result == file_path
-    assert line_parts == [(2, 4)]
+    assert len(line_parts) == 1
+    assert line_parts[0].start == 2
+    assert line_parts[0].end == 4
 
     # Valid multiple
-    result, line_parts = verify_path(f"{file_path}:L1,L3-4,L5")
-    assert result == file_path
-    assert line_parts == [(1, 1), (3, 4), (5, 5)]
+    content_item = create_content_item(f"{file_path}:L1,L3-4,L5")
+    assert len(content_item.ranges) == 3
 
 
 def test_verify_path_with_line_reference_invalid(tmpdir):
@@ -126,30 +145,30 @@ def test_verify_path_with_line_reference_invalid(tmpdir):
 
     # Invalid line number (too high)
     with pytest.raises(ValueError) as excinfo:
-        verify_path(f"{file_path}:L10")
+        create_content_item(f"{file_path}:L10").validate()
     assert "Line reference out of range" in str(excinfo.value)
 
     # Invalid range (end too high)
     with pytest.raises(ValueError) as excinfo:
-        verify_path(f"{file_path}:L2-10")
+        create_content_item(f"{file_path}:L2-10").validate()
     assert "Line reference out of range" in str(excinfo.value)
 
     # Invalid multiple (one invalid)
     with pytest.raises(ValueError) as excinfo:
-        verify_path(f"{file_path}:L1,L10")
+        create_content_item(f"{file_path}:L1,L10").validate()
     assert "Line reference out of range" in str(excinfo.value)
 
     # Invalid characters after line number
     with pytest.raises(ValueError) as excinfo:
-        verify_path(f"{file_path}:L3bad")
+        create_content_item(f"{file_path}:L3bad")
     assert "Invalid character in line reference" in str(excinfo.value)
 
     # Invalid characters after range
     with pytest.raises(ValueError) as excinfo:
-        verify_path(f"{file_path}:L1-2bad")
+        create_content_item(f"{file_path}:L1-2bad")
     assert "Invalid character in line reference" in str(excinfo.value)
 
     # Non-existent file with line reference
     with pytest.raises(FileNotFoundError) as excinfo:
-        verify_path("nonexistent_file.txt:L5")
-    assert "Path does not exist" in str(excinfo.value)
+        create_content_item("nonexistent_file.txt:L5").validate()
+    assert "File not found" in str(excinfo.value)
