@@ -28,7 +28,10 @@ def get_package_metadata(package_name='nanodoc'):
         dict or None: Package metadata dictionary if found, None otherwise
     """
     try:
-        return importlib.metadata.metadata(package_name)
+        metadata = importlib.metadata.metadata(package_name)
+        # Print the metadata keys for debugging
+        # print(f"Available metadata keys: {list(metadata.keys())}", file=sys.stderr)
+        return metadata
     except importlib.metadata.PackageNotFoundError:
         return None
 
@@ -56,6 +59,7 @@ Examples:
     parser.add_argument('--summary', action='store_true', help='Display package summary/description')
     parser.add_argument('--author', action='store_true', help='Display package author')
     parser.add_argument('--home-page', action='store_true', help='Display package home page')
+    parser.add_argument('--license', action='store_true', help='Display package license')
     parser.add_argument('--all', action='store_true', help='Display all metadata')
     parser.add_argument('package_name', nargs='?', default='nanodoc', help='Package name to query (default: nanodoc)')
 
@@ -81,6 +85,7 @@ Examples:
         print(f"Summary: {metadata['Summary']}")
         print(f"Author: {metadata['Author']}")
         print(f"Home-page: {metadata['Home-page']}")
+        print(f"License: {metadata.get('License', 'Unknown')}")
     else:
         if args.name:
             print(metadata['Name'])
@@ -92,6 +97,8 @@ Examples:
             print(metadata['Author'])
         if args.home_page:
             print(metadata['Home-page'])
+        if args.license:
+            print(metadata.get('License', 'Unknown'))
 
 
 if __name__ == "__main__":

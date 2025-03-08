@@ -36,6 +36,7 @@ isort = "^6.0.1"
 autoflake = "^2.3.1"
 pytest = "^8.3.5"
 twine = "^6.1.0"
+jinja2 = "^3.1.6"
 
 [tool.scripts]
 nanodoc = "nanodoc.nanodoc:main"
