@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""
+Package Metadata Reader
+
+A command line utility to query and display metadata information from installed Python packages.
+This tool allows you to easily retrieve information like package name, version, author,
+summary, and homepage URL directly from the command line.
+
+Usage examples:
+  python reader.py --version nanodoc      # Get version of nanodoc package
+  python reader.py --all pytest           # Get all metadata for pytest
+  python reader.py --summary              # Get summary for nanodoc (default package)
+  python reader.py --author requests      # Get author of requests package
+"""
+
+import importlib.metadata
+import argparse
+
+
+def get_package_metadata(package_name='nanodoc'):
+    """
+    Get metadata for the specified package.
+
+    Args:
+        package_name (str): The name of the package to query (default: nanodoc)
+
+    Returns:
+        dict or None: Package metadata dictionary if found, None otherwise
+    """
+    try:
+        metadata = importlib.metadata.metadata(package_name)
+        # Print the metadata keys for debugging
+        # print(f"Available metadata keys: {list(metadata.keys())}", file=sys.stderr)
+        return metadata
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def main():
+    """
+    Command line interface for querying package metadata.
+
+    Parses command line arguments and displays the requested metadata
+    for the specified package.
+    """
+    parser = argparse.ArgumentParser(
+        description='Query package metadata from installed Python packages',
+        epilog="""
+Examples:
+  python reader.py --version nanodoc      # Get version of nanodoc package
+  python reader.py --all pytest           # Get all metadata for pytest
+  python reader.py --summary              # Get summary for nanodoc (default package)
+  python reader.py --author requests      # Get author of requests package
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('--name', action='store_true', help='Display package name')
+    parser.add_argument('--version', action='store_true', help='Display package version')
+    parser.add_argument('--summary', action='store_true', help='Display package summary/description')
+    parser.add_argument('--author', action='store_true', help='Display package author')
+    parser.add_argument('--home-page', action='store_true', help='Display package home page')
+    parser.add_argument('--license', action='store_true', help='Display package license')
+    parser.add_argument('--all', action='store_true', help='Display all metadata')
+    parser.add_argument('package_name', nargs='?', default='nanodoc', help='Package name to query (default: nanodoc)')
+
+    args = parser.parse_args()
+
+    # If no arguments provided, show help and examples
+    if not any([args.name, args.version, args.summary, args.author, args.home_page, args.all]):
+        parser.print_help()
+        print("\nNo metadata fields selected. Please specify at least one field to display.")
+        print("For example: python reader.py --version nanodoc")
+        return
+
+    metadata = get_package_metadata(args.package_name)
+
+    if metadata is None:
+        print(f"Package '{args.package_name}' not found")
+        return
+
+    # Display requested information
+    if args.all:
+        print(f"Name: {metadata['Name']}")
+        print(f"Version: {metadata['Version']}")
+        print(f"Summary: {metadata['Summary']}")
+        print(f"Author: {metadata['Author']}")
+        print(f"Home-page: {metadata['Home-page']}")
+        print(f"License: {metadata.get('License', 'Unknown')}")
+    else:
+        if args.name:
+            print(metadata['Name'])
+        if args.version:
+            print(metadata['Version'])
+        if args.summary:
+            print(metadata['Summary'])
+        if args.author:
+            print(metadata['Author'])
+        if args.home_page:
+            print(metadata['Home-page'])
+        if args.license:
+            print(metadata.get('License', 'Unknown'))
+
+
+if __name__ == "__main__":
+    main()
