@@ -180,6 +180,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(
         description="Generate documentation from source code.",
+        prog="nanodoc",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("-v", action="store_true", help="Enable verbose mode")
@@ -236,6 +237,7 @@ def _check_help(args):
     if not args.sources and args.help is None:
         parser = argparse.ArgumentParser(
             description="Generate documentation from source code.",
+            prog="nanodoc",
             formatter_class=argparse.RawTextHelpFormatter,
         )
         parser.print_usage()

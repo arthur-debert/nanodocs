@@ -97,23 +97,3 @@ echo "deb [trusted=yes] https://raw.githubusercontent.com/arthur-debert/nanodoc/
 sudo apt update
 sudo apt install python3-nanodoc
 ```
-
-## Installing with Homebrew (macOS)
-
-To install nanodoc using Homebrew on macOS:
-
-1. Tap the repository directly using the full URL:
-
-```bash
-brew tap arthur-debert/nanodoc https://github.com/arthur-debert/nanodoc
-```
-
-2. Install nanodoc:
-
-```bash
-brew install nanodoc
-```
-
-Note: Normally, Homebrew looks for repositories named `homebrew-{tap-name}` by
-default. Since the repository is directly named "nanodoc" without the
-"homebrew-" prefix, we need to specify the full URL when tapping.
