@@ -1,0 +1,57 @@
+name: Update Homebrew Formula
+
+on:
+  workflow_run:
+    workflows: ["Publish to PyPI"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: "3.11"
+          cache-key-prefix: "brew-formula-env"
+
+      - name: Get package version
+        id: get_version
+        shell: bash
+        run: |
+          version=$(poetry version -s)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Generate Homebrew formula
+        shell: bash
+        run: |
+          # Make scripts executable
+          chmod +x bin/pypi-to-brew
+          chmod +x bin/update-brew-formula.sh
+
+          # Run the update script
+          bin/update-brew-formula.sh
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Check if there are changes to commit
+          if git diff --quiet Formula/nanodoc.rb; then
+            echo "No changes to the formula, skipping commit"
+            exit 0
+          fi
+
+          git add Formula/nanodoc.rb
+          git commit -m "Update Homebrew formula to version ${{ steps.get_version.outputs.version }}"
+          git push

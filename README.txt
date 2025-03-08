@@ -74,10 +74,20 @@ $ nanodoc --help # all there is
 
 ## Installation
 
-nandoc is available at a distributor near you:
+nanodoc is available at a distributor near you:
 
+# Using pip
 pip install nanodoc
+
+# Using Homebrew (macOS and Linux)
+# First, add the tap (only needed once)
+brew tap arthur-debert/nanodoc
+# Then install the package
 brew install nanodoc
+# To update to the latest version
+brew update && brew upgrade nanodoc
+
+# Using apt (Debian/Ubuntu)
 apt-get install nanodoc
 
 

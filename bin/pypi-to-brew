@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import os
 import shutil
+import re
 import subprocess
 import sys
 import tempfile
@@ -138,6 +139,20 @@ def get_package_metadata(venv_path: str, package_name: str) -> Dict[str, str]:
     return metadata
 
 
+def get_license_from_file(license_file_path: str = "bin/LICENSE") -> str:
+    """Get the license type from the LICENSE file."""
+    try:
+        with open(license_file_path, "r") as f:
+            content = f.read()
+            # Extract license type from the first few lines
+            match = re.search(r"(MIT|Apache|GPL|BSD|MPL|LGPL|EPL|CDDL|CPL)\s+License", content, re.IGNORECASE)
+            if match:
+                return match.group(1)
+    except Exception:
+        pass
+    return "MIT"  # Default to MIT if not found or error
+
+
 def get_package_url(package_name: str, version: str) -> str:
     """Get the URL for the package source."""
     return f"https://files.pythonhosted.org/packages/source/{package_name[0]}/{package_name}/{package_name}-{version}.tar.gz"
@@ -164,10 +179,16 @@ def generate_formula(metadata: Dict[str, str], sha256: str, executable: str) -> 
     """Generate the Homebrew formula using the Jinja2 template."""
     template = jinja2.Template(FORMULA_TEMPLATE)
 
-    # Fix license - use a default if not available or if it's the help text
-    license_text = metadata["license"]
-    if license_text.startswith("usage:") or license_text == "Unknown":
-        license_text = "MIT"  # Default to MIT if license is not available
+    # Try to get license from LICENSE file first
+    script_dir = Path(__file__).parent
+    license_file = script_dir / "LICENSE"
+    if license_file.exists():
+        license_text = get_license_from_file(str(license_file))
+    else:
+        # Fall back to metadata license if file doesn't exist
+        license_text = metadata["license"]
+        if license_text.startswith("usage:") or license_text == "Unknown":
+            license_text = "MIT"  # Default to MIT if license is not available
 
     # Capitalize the first letter of each word in the class name
     class_name = "".join(word.capitalize() for word in metadata["name"].split("-"))
