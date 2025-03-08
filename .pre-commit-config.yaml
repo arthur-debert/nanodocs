@@ -148,7 +148,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [commit]
+        stages: [pre-commit]
         # Run this hook after the poetry check hook and before the git-add-all-fixes hook
 
   - repo: local
