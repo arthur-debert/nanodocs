@@ -81,8 +81,7 @@ pip install nanodoc
 
 # Using Homebrew (macOS and Linux)
 # First, add the tap (only needed once)
-brew tap arthur-debert/nanodoc
-# Then install the package
+brew tap arthur-debert/nanodoc https://github.com/arthur-debert/nanodoc
 brew install nanodoc
 # To update to the latest version
 brew update && brew upgrade nanodoc
@@ -100,7 +99,6 @@ sudo apt update
 sudo apt install python3-nanodoc
 
 # For more detailed APT installation instructions, see README-apt-repo.md
-
 
 ## Contributing
 
