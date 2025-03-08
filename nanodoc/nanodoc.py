@@ -62,6 +62,7 @@ nanodoc offers three ways to specify the files you want to bundle:
 - `-n`: Enable per-file line numbering (01, 02, etc.)
 - `-nn`: Enable global line numbering (001, 002, etc.)
 - `--toc`: Include a table of contents at the beginning
+| - `--export-bundle BUNDLE_FILE`: Export a bundle file that can be used to recreate this document
 | - `--no-header`: Hide file headers completely
 | - `--sequence`: Add sequence numbers to headers
 |   - `numerical`: Use numbers (1., 2., etc.)
@@ -89,6 +90,7 @@ nanodoc -n intro.txt chapter1.txt           # Bundle with per-file numbering
 nanodoc -nn --toc                           # Bundle all files with TOC and global numbers
 nanodoc --toc -v                            # Verbose bundle with TOC
 nanodoc some_directory                      # Add all files in directory
+| nanodoc --export-bundle bundle.txt file1.txt file2.txt  # Export a bundle file for later use
 | nanodoc --no-header file1.txt file2.txt   # Hide headers
 | nanodoc --sequence=roman file1.txt        # Use roman numerals (i., ii., etc.)
 | nanodoc --style=filename file1.txt        # Use filename style instead of nice (default)
@@ -106,12 +108,14 @@ import sys
 try:
     # Try relative imports first (when used as a package)
     from .core import process_all
+    from .data import Bundle, save_bundle
     from .files import get_files_from_args
 except ImportError:
     # Fall back to absolute imports (when run as a script)
     # Add parent directory to path to make nanodoc a package
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from nanodoc.core import process_all
+    from nanodoc.data import Bundle, save_bundle
     from nanodoc.files import get_files_from_args
 
 
@@ -205,6 +209,11 @@ def parse_args():
         help="Header style: nice (default, formatted title), filename (just filename), "
         "or path (full path)",
     )
+    parser.add_argument(
+        "--export-bundle",
+        metavar="BUNDLE_FILE",
+        help="Export a bundle file that can be used to recreate this document",
+    )
 
     parser.add_argument("sources", nargs="*", help="Source file(s)")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
@@ -245,6 +254,29 @@ def _check_help(args):
         sys.exit(0)
 
 
+def export_bundle_file(content_items, bundle_file_path):
+    """Export a bundle file from the given content items.
+
+    Args:
+        content_items (List[ContentItem]): The list of ContentItems to include in the bundle.
+        bundle_file_path (str): The path to the bundle file to create.
+
+    Returns:
+        bool: True if the bundle was successfully exported, False otherwise.
+    """
+    try:
+        # Create a Bundle object
+        bundle = Bundle(file_path=bundle_file_path, content_items=content_items)
+
+        # Save the bundle to a file
+        save_bundle(bundle)
+
+        return True
+    except Exception as e:
+        print(f"Error exporting bundle: {e}", file=sys.stderr)
+        return False
+
+
 def main():
     """Main entry point for the nanodoc application."""
     args = parse_args()
@@ -263,6 +295,18 @@ def main():
         if not content_items:
             print("Error: No valid source files found.", file=sys.stderr)
             sys.exit(1)
+
+        # Export bundle if requested
+        if args.export_bundle:
+            logger.debug(f"Exporting bundle to {args.export_bundle}")
+            if export_bundle_file(content_items, args.export_bundle):
+                # Bundle exported successfully, but don't print a message
+                pass
+            else:
+                print(
+                    f"Failed to export bundle to {args.export_bundle}", file=sys.stderr
+                )
+                sys.exit(1)
 
         output = process_all(
             content_items,

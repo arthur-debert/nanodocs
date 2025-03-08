@@ -54,12 +54,19 @@ Get fancy
 - `--seq`: numerical, roman or letter for ref the file sequence
 - `--style`: nice (Human Readable (human-readable.txt), or file, or full-path
 
-Save for later:
+Export Bundle:
 ---------------
 
-Generated a doc good enough to repeat, export the bundle
+Generated a doc good enough to repeat? Export the bundle to reuse it later:
 
-$nanodoc --export-bundle bestdocs.bundle.txt <file-1>...<file-n>
+$ nanodoc --export-bundle bestdocs.bundle.txt <file-1>...<file-n>
+
+This will run nanodoc as usual, but will also export a bundle file that defines this setup.
+The bundle file contains a list of file paths, one per line, with optional line references.
+
+To use the bundle file later, simply pass it as an argument to nanodoc:
+
+$ nanodoc bestdocs.bundle.txt
 
 Keep it simple
 --------------

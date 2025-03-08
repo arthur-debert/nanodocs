@@ -80,6 +80,22 @@ class ContentItem:
     content: Optional[str] = None
 
 
+@dataclass
+class Bundle:
+    """A data class representing a bundle file.
+
+    Note: Operations on Bundle objects should be performed using functions,
+    not methods. This class is intended to be used as a data holder only.
+
+    Attributes:
+        file_path (str): The path to the bundle file.
+        content_items (List[ContentItem]): A list of ContentItem objects.
+    """
+
+    file_path: str
+    content_items: List[ContentItem]
+
+
 def validate_content_item(content_item: ContentItem) -> bool:
     """Validate that the file exists and ranges are valid.
 
@@ -178,3 +194,51 @@ def get_content(content_item: ContentItem) -> str:
     if content_item.content is None:
         return load_content(content_item)
     return content_item.content
+
+
+def create_bundle_content(content_items: List[ContentItem]) -> str:
+    """Create the content for a bundle file from a list of ContentItems.
+
+    Args:
+        content_items (List[ContentItem]): The list of ContentItems to include in the bundle.
+
+    Returns:
+        str: The content of the bundle file.
+    """
+    lines = []
+
+    # Add a header comment
+    lines.append("# nanodoc bundle file")
+    lines.append("# This file contains a list of files to be bundled by nanodoc")
+    lines.append("# Each line represents a file path, optionally with line references")
+    lines.append("")
+
+    # Add each content item
+    for item in content_items:
+        # If it's a full file (no specific line ranges), just add the file path
+        if len(item.ranges) == 1 and is_full_file(item.ranges[0]):
+            lines.append(item.file_path)
+        else:
+            # For specific line ranges, add the file path with line references
+            ranges_str = ",".join(line_range_to_string(r) for r in item.ranges)
+            lines.append(f"{item.file_path}:{ranges_str}")
+
+    return "\n".join(lines)
+
+
+def save_bundle(bundle: Bundle) -> None:
+    """Save a bundle to a file.
+
+    Args:
+        bundle (Bundle): The bundle to save.
+
+    Raises:
+        IOError: If the file cannot be written.
+    """
+    content = create_bundle_content(bundle.content_items)
+
+    try:
+        with open(bundle.file_path, "w") as f:
+            f.write(content)
+    except IOError as e:
+        raise IOError(f"Failed to write bundle file {bundle.file_path}: {str(e)}")
