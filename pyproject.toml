@@ -1,12 +1,28 @@
 [project]
 name = "nanodoc"
-version = "0.1.0"
-description = ""
+version = "0.1.1"
+description = "A minimalist document bundler designed for stitching hints, reminders and short docs."
 authors = [
-    {name = "adebert",email = "debert@gmail.com"}
+    {name = "Arthur Debert", email = "arthur@debert.xyz"}
 ]
-readme = "README.md"
+readme = "README.txt"
 requires-python = ">=3.9"
+license = {text = "MIT"}
+keywords = ["documentation", "bundler", "minimalist", "text", "prompts"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Documentation",
+    "Topic :: Text Processing :: Markup",
+]
+
+[project.urls]
+Homepage = "https://github.com/arthur-debert/nanodoc/"
+Repository = "https://github.com/arthur-debert/nanodoc/"
+"Bug Tracker" = "https://github.com/arthur-debert/nanodoc/issues"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -23,3 +39,4 @@ twine = "^6.1.0"
 
 [tool.scripts]
 nanodoc = "nanodoc.nanodoc:main"
+pmrun = "nanodoc.nanodoc:main"
