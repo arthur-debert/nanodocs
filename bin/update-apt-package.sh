@@ -20,7 +20,7 @@ chmod +x bin/about-py-package
 # Generate the Debian package
 bin/pypi-to-apt "$PACKAGE_NAME" --output-dir "$OUTPUT_DIR"
 
-echo "Debian package for $PACKAGE_NAME has been generated in $OUTPUT_DIR/"
+echo "Debian package for $PACKAGE_NAME has been generated in $OUTPUT_DIR"
 
 # Test the package if we're running in a Debian-based environment
 if [ -f /etc/debian_version ]; then

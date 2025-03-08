@@ -1,3 +1,46 @@
+Metadata-Version: 2.3
+Name: nanodoc
+Version: 0.3.1
+Summary: A minimalist document bundler designed for stitching hints, reminders and short docs.
+Home-page: https://github.com/arthur-debert/nanodoc/
+License: # License
+         
+         MIT License
+         
+         Copyright (c) 2024 Arthur Debert
+         
+         Permission is hereby granted, free of charge, to any person obtaining a copy
+         of this software and associated documentation files (the "Software"), to deal
+         in the Software without restriction, including without limitation the rights
+         to use, copy, modify, merge, publish, distribute, innerlicense, and/or sell
+         copies of the Software, and to permit persons to whom the Software is
+         furnished to do so, innerject to the following conditions:
+         
+         The above copyright notice and this permission notice shall be included in all
+         copies or innerstantial portions of the Software.
+         
+         THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+         IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+         FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+         AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+         LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+         OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+         SOFTWARE.
+Keywords: documentation,bundler,minimalist,text,prompts
+Author: Arthur Debert
+Author-email: arthur@debert.xyz
+Requires-Python: >=3.9
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: Documentation
+Classifier: Topic :: Text Processing :: Markup
+Project-URL: Bug Tracker, https://github.com/arthur-debert/nanodoc/issues
+Project-URL: Repository, https://github.com/arthur-debert/nanodoc/
+Description-Content-Type: text/plain
+
 Nanodoc
 --------
 
@@ -87,19 +130,8 @@ brew install nanodoc
 # To update to the latest version
 brew update && brew upgrade nanodoc
 
-# Using apt (Debian/Ubuntu) - Direct installation
-wget https://github.com/arthur-debert/nanodoc/raw/main/Debian/python3-nanodoc_0.3.1-1_all.deb
-sudo apt install ./python3-nanodoc_0.3.1-1_all.deb
-
-# Using apt (Debian/Ubuntu) - Add as repository
-# Add the repository to your sources
-echo "deb [trusted=yes] https://raw.githubusercontent.com/arthur-debert/nanodoc/main/Debian ./" | sudo tee /etc/apt/sources.list.d/nanodoc.list
-# Update package lists
-sudo apt update
-# Install the package
-sudo apt install python3-nanodoc
-
-# For more detailed APT installation instructions, see README-apt-repo.md
+# Using apt (Debian/Ubuntu)
+apt-get install nanodoc
 
 
 ## Contributing
@@ -112,3 +144,4 @@ Feel free to open issues or submit pull requests.
 ## License
 
 MIT License
+
