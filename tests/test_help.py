@@ -19,5 +19,5 @@ def test_help():
 def test_no_args():
     result = subprocess.run(["python", NANODOC_SCRIPT], capture_output=True, text=True)
     assert result.returncode == 0
-    assert "usage: nanodoc.py" in result.stdout
+    assert "usage: nanodoc" in result.stdout
     assert "# nanodoc" not in result.stdout
