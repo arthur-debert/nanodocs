@@ -100,6 +100,13 @@ repos:
       - id: markdownlint
         args: ["--config", ".markdownlint.json", "--fix"]
         stages: [pre-commit]
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        files: '\.py$'
+        stages: [pre-commit]
+        args: ["--profile", "black"]
   - repo: https://github.com/psf/black
     rev: 24.2.0
     hooks:
@@ -117,13 +124,6 @@ repos:
             "--remove-all-unused-imports",
             "--remove-unused-variables",
           ]
-        files: '\.py$'
-        stages: [pre-commit]
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
         files: '\.py$'
         stages: [pre-commit]
 

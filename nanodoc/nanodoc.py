@@ -114,6 +114,7 @@ except ImportError:
     from nanodoc.core import process_all
     from nanodoc.files import get_files_from_args
 
+
 # Version and configuration constants
 VERSION = "0.1.0"
 LINE_WIDTH = 80
@@ -247,6 +248,7 @@ def _check_help(args):
 def main():
     """Main entry point for the nanodoc application."""
     args = parse_args()
+
     # short circuit for help
     _check_help(args)
 
@@ -254,16 +256,16 @@ def main():
         # Set up logging based on verbose flag
         setup_logging(to_stderr=True, enabled=args.v)
 
-        # Get verified sources from arguments
-        verified_sources = get_files_from_args(args.sources)
+        # Get verified content items from arguments
+        content_items = get_files_from_args(args.sources)
 
         # Process the files and print the result
-        if not verified_sources:
+        if not content_items:
             print("Error: No valid source files found.", file=sys.stderr)
             sys.exit(1)
 
         output = process_all(
-            verified_sources,
+            content_items,
             args.line_number_mode,
             args.toc,
             not args.no_header,

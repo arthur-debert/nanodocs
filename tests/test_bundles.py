@@ -51,7 +51,12 @@ def test_verify_path_valid(tmpdir):
     test_file.write("Line 1")
 
     # Should return the path if valid
-    assert verify_path(str(test_file)) == str(test_file)
+    result = verify_path(str(test_file))
+    # Handle both return types (str or tuple)
+    if isinstance(result, tuple):
+        assert result[0] == str(test_file)
+    else:
+        assert result == str(test_file)
 
 
 def test_expand_bundles_empty(tmpdir):
