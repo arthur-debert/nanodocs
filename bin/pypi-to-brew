@@ -36,21 +36,25 @@ FORMULA_TEMPLATE = """class {{ class_name }} < Formula
   license "{{ license }}"
 
   depends_on "python@3"
-  depends_on "poetry"
 
   def install
-    system "poetry", "install"
+    # Install using pip
+    system "pip3", "install", "--prefix=#{prefix}", "{{ package_name }}==#{version}"
 
-    # Create wrapper script for pmrun
-    (bin/"{{ executable }}").write <<~EOS
+    # Create wrapper script that uses python -m nanodoc
+    (bin/"{{ package_name }}").write <<~EOS
       #!/bin/bash
-      cd #{prefix} && poetry run {{ executable }} "$@"
+      python3 -m {{ package_name }} "$@"
     EOS
-    chmod 0755, bin/"{{ executable }}"
+    chmod 0755, bin/"{{ package_name }}"
   end
 
   test do
-    system "#{bin}/{{ executable }}", "--help"
+    # Test using the wrapper script
+    system bin/"{{ package_name }}", "--help"
+
+    # Also test using python -m directly
+    system "python3", "-m", "{{ package_name }}", "--help"
   end
 end
 """
@@ -196,6 +200,7 @@ def generate_formula(metadata: Dict[str, str], sha256: str, executable: str) -> 
     return template.render(
         class_name=class_name,
         description=metadata["summary"],
+        package_name=metadata["name"],
         homepage=metadata["home_page"],
         url=get_package_url(metadata["name"], metadata["version"]),
         sha256=sha256,

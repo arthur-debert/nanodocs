@@ -1,4 +1,4 @@
-name: Update Homebrew Formula
+name: Update APT Package
 
 on:
   # Respond to custom repository-dispatch event from PyPI publish workflow
@@ -32,7 +32,7 @@ permissions:
   contents: write
 
 jobs:
-  update-formula:
+  update-apt-package:
     runs-on: ubuntu-latest
     # Only run if triggered by workflow_run and that workflow was successful
     if:
@@ -53,7 +53,7 @@ jobs:
         uses: ./.github/actions/setup-python-poetry
         with:
           python-version: "3.11"
-          cache-key-prefix: "brew-formula-env"
+          cache-key-prefix: "apt-package-env"
 
       - name: Get package version
         id: get_version
@@ -62,30 +62,56 @@ jobs:
           version=$(poetry version -s)
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Generate Homebrew formula
-        id: generate_formula
+      - name: Install dependencies
+        shell: bash
+        run: |
+          # Install required packages for building Debian packages
+          sudo apt-get update
+          sudo apt-get install -y python3-all python3-setuptools dh-python debhelper devscripts build-essential fakeroot lintian
+
+          # Install jinja2 for the pypi-to-apt script
+          pip install jinja2
+
+      - name: Generate APT package
+        id: generate_package
         shell: bash
         run: |
           # Get package name from input or default to nanodoc
           PACKAGE_NAME="${{ github.event.inputs.package_name || 'nanodoc' }}"
-          echo "Generating formula for package: $PACKAGE_NAME"
+          echo "Generating APT package for package: $PACKAGE_NAME"
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
 
-          # Install jinja2 for the pypi-to-brew script
-          pip install jinja2
-
           # Make scripts executable
-          chmod +x bin/pypi-to-brew
-          chmod +x bin/update-brew-formula.sh
+          chmod +x bin/pypi-to-apt
+          chmod +x bin/about-py-package
+          chmod +x bin/update-apt-package.sh
 
           # Run the update script
-          bin/update-brew-formula.sh "$PACKAGE_NAME"
+          bin/update-apt-package.sh "$PACKAGE_NAME"
+
+      - name: Test APT package
+        shell: bash
+        run: |
+          # Get package name from previous step
+          PACKAGE_NAME="${{ steps.generate_package.outputs.package_name }}"
+          echo "Testing APT package for: $PACKAGE_NAME"
+
+          # Install the package
+          sudo apt install -y ./Debian/python3-$PACKAGE_NAME*.deb
+
+          # Test the package by running it with --help
+          python3 -m $PACKAGE_NAME --help
+
+          # Additional tests could be added here
+          # For example, running specific tests for the package
+
+          echo "Package test completed successfully"
 
       - name: Commit and push changes
         shell: bash
         run: |
           # Get package name from previous step
-          PACKAGE_NAME="${{ steps.generate_formula.outputs.package_name }}"
+          PACKAGE_NAME="${{ steps.generate_package.outputs.package_name }}"
           echo "Using package name: $PACKAGE_NAME"
 
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -108,15 +134,15 @@ jobs:
           fi
 
           # Check if there are changes to commit
-          if git diff --quiet Formula/$PACKAGE_NAME.rb; then
+          if git diff --quiet Debian/; then
             if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
               echo "No changes detected, but force_update is true. Proceeding with commit."
             else
-              echo "No changes to the formula, skipping commit"
+              echo "No changes to the APT package, skipping commit"
               exit 0
             fi
           fi
 
-          git add Formula/$PACKAGE_NAME.rb
-          git commit -m "Update Homebrew formula for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
+          git add Debian/
+          git commit -m "Update APT package for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
           git push origin $BRANCH_NAME
