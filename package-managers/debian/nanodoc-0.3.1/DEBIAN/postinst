@@ -2,7 +2,7 @@
 set -e
 
 # Create a wrapper script
-cat >/usr/bin/nanodoc <<'EOF'
+cat > /usr/bin/nanodoc << 'EOF'
 #!/bin/bash
 python3 -m nanodoc "$@"
 EOF
