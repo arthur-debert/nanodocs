@@ -1,11 +1,7 @@
 import pytest
 
-from nanodoc.files import (
-    LineRange,
-    create_content_item,
-    get_file_content,
-    parse_line_reference,
-)
+from nanodoc.data import LineRange
+from nanodoc.files import create_content_item, get_file_content, parse_line_reference
 
 
 def test_parse_line_reference_single_line():

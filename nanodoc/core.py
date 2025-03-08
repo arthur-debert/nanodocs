@@ -2,7 +2,7 @@ import logging
 import os
 from typing import List, Optional, Tuple
 
-from .files import ContentItem
+from .data import ContentItem
 from .formatting import apply_style_to_filename, create_header
 
 logger = logging.getLogger("nanodoc")

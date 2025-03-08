@@ -1,8 +1,7 @@
 import pytest
 
+from nanodoc.data import ContentItem, LineRange
 from nanodoc.files import (
-    ContentItem,
-    LineRange,
     create_content_item,
     get_files_from_args,
     parse_line_reference,
