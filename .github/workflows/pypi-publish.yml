@@ -73,3 +73,14 @@ jobs:
           prerelease: false
           name:
             "Release v${{ steps.determine_version.outputs.release_version }}"
+
+      - name: Trigger Homebrew Formula Update
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          # Note: This requires a personal access token with repo scope
+          # You need to create this token and add it as a repository secret
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          event-type: pypi-published
+          client-payload:
+            '{"version": "${{ steps.determine_version.outputs.release_version
+            }}"}'

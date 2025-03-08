@@ -1,10 +1,30 @@
 name: Update Homebrew Formula
 
 on:
+  # Respond to custom repository-dispatch event from PyPI publish workflow
+  repository_dispatch:
+    types: [pypi-published]
+  # Trigger after a GitHub Release is published
+  release:
+    types: [published]
+  # Keep the workflow_run trigger as a backup
   workflow_run:
     workflows: ["Publish to PyPI"]
     types:
       - completed
+  # Add manual trigger option for testing
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: "Force update even if no changes detected"
+        required: false
+        type: boolean
+        default: false
+      package_name:
+        description: "Package name (default: nanodoc)"
+        required: false
+        type: string
+        default: "nanodoc"
 
 permissions:
   contents: write
@@ -12,10 +32,18 @@ permissions:
 jobs:
   update-formula:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only run if triggered by workflow_run and that workflow was successful
+    if:
+      ${{ github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          # Fetch all history for proper versioning
+          fetch-depth: 0
+          # Ensure we have permission to push changes
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-poetry
@@ -33,12 +61,16 @@ jobs:
       - name: Generate Homebrew formula
         shell: bash
         run: |
+          # Get package name from input or default to nanodoc
+          PACKAGE_NAME="${{ github.event.inputs.package_name || 'nanodoc' }}"
+          echo "Generating formula for package: $PACKAGE_NAME"
+
           # Make scripts executable
           chmod +x bin/pypi-to-brew
           chmod +x bin/update-brew-formula.sh
 
           # Run the update script
-          bin/update-brew-formula.sh
+          bin/update-brew-formula.sh "$PACKAGE_NAME"
 
       - name: Commit and push changes
         shell: bash
@@ -47,11 +79,15 @@ jobs:
           git config --local user.name "github-actions[bot]"
 
           # Check if there are changes to commit
-          if git diff --quiet Formula/nanodoc.rb; then
-            echo "No changes to the formula, skipping commit"
-            exit 0
+          if git diff --quiet Formula/$PACKAGE_NAME.rb; then
+            if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
+              echo "No changes detected, but force_update is true. Proceeding with commit."
+            else
+              echo "No changes to the formula, skipping commit"
+              exit 0
+            fi
           fi
 
-          git add Formula/nanodoc.rb
-          git commit -m "Update Homebrew formula to version ${{ steps.get_version.outputs.version }}"
+          git add Formula/$PACKAGE_NAME.rb
+          git commit -m "Update Homebrew formula for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
           git push
