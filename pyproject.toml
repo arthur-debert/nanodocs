@@ -1,6 +1,6 @@
 [project]
 name = "nanodoc"
-version = "0.2.1"
+version = "0.3.1"
 description = "A minimalist document bundler designed for stitching hints, reminders and short docs."
 authors = [
     {name = "Arthur Debert", email = "arthur@debert.xyz"}
@@ -28,6 +28,25 @@ Repository = "https://github.com/arthur-debert/nanodoc/"
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry]
+packages = [{include = "nanodoc"}]
+include = ["bin/**/*", "README.txt", "LICENSE"]
+exclude = [
+    "docs/**/*",
+    "samples/**/*",
+    "tests/**/*",
+    "tmp/**/*",
+    "notes/**/*",
+    "drafts/**/*",
+    ".vscode/**/*",
+    ".VSCodeCounter/**/*",
+    ".coverage",
+    ".coverage.*",
+    "**/*.pyc",
+    "**/__pycache__/**",
+    "**/*.log"
+]
+
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.1.0"
 black = "^25.1.0"
@@ -38,6 +57,7 @@ pytest = "^8.3.5"
 twine = "^6.1.0"
 jinja2 = "^3.1.6"
 
+# do not use: [tool.poetry.scripts]
 [tool.scripts]
 nanodoc = "nanodoc.nanodoc:main"
 pmrun = "nanodoc.nanodoc:main"

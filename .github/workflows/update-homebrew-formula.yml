@@ -42,8 +42,8 @@ jobs:
         with:
           # Fetch all history for proper versioning
           fetch-depth: 0
-          # Ensure we have permission to push changes
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use PAT for better permissions
+          token: ${{ secrets.PAT }}
 
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-poetry
