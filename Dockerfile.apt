@@ -1,0 +1,26 @@
+FROM debian:bullseye
+
+# Install required packages for building Debian packages
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-all \
+    python3-setuptools \
+    python3-wheel \
+    dh-python \
+    debhelper \
+    devscripts \
+    build-essential \
+    fakeroot \
+    lintian \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Jinja2 for templating
+RUN pip3 install jinja2
+
+# Create a directory for the project
+WORKDIR /app
+
+# The project will be mounted as a volume
+ENTRYPOINT ["/bin/bash"]

@@ -136,3 +136,6 @@ pytest.log
 **/messages.mo
 docs/site
 tmp
+# Debian package build artifacts
+debian-build/
+*.deb
