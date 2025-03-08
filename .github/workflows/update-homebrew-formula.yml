@@ -63,11 +63,13 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Generate Homebrew formula
+        id: generate_formula
         shell: bash
         run: |
           # Get package name from input or default to nanodoc
           PACKAGE_NAME="${{ github.event.inputs.package_name || 'nanodoc' }}"
           echo "Generating formula for package: $PACKAGE_NAME"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
 
           # Make scripts executable
           chmod +x bin/pypi-to-brew
@@ -79,6 +81,10 @@ jobs:
       - name: Commit and push changes
         shell: bash
         run: |
+          # Get package name from previous step
+          PACKAGE_NAME="${{ steps.generate_formula.outputs.package_name }}"
+          echo "Using package name: $PACKAGE_NAME"
+
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
