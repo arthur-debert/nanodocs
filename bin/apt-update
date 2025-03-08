@@ -90,7 +90,40 @@ fi
 
 # Trigger the workflow
 echo "Triggering APT package update workflow..."
-if gh workflow run "Update APT Package" --ref "${BRANCH_TO_USE}" --field force_update=${FORCE_UPDATE_FLAG} --field package_name=${PACKAGE_NAME} 2>/dev/null; then
+
+# Check if we're on a non-default branch
+if [[ ${BRANCH_TO_USE} != "${DEFAULT_BRANCH}" ]]; then
+  echo "You are on branch '${BRANCH_TO_USE}', which is not the default branch '${DEFAULT_BRANCH}'."
+  echo "GitHub Actions workflows are only registered when they are on the default branch."
+  echo ""
+  echo "Options:"
+  echo "1. Merge your changes to the default branch '${DEFAULT_BRANCH}' first"
+  echo "2. Try running the workflow directly with the workflow file path"
+  echo "3. Cancel"
+  read -r -p "Choose an option (1-3): " WORKFLOW_OPTION
+
+  case ${WORKFLOW_OPTION} in
+    1)
+      echo "Please merge your changes to the default branch and try again."
+      exit 0
+      ;;
+    2)
+      echo "Attempting to run the workflow directly with the file path..."
+      if gh workflow run .github/workflows/update-apt-package.yml --ref "${BRANCH_TO_USE}" --field force_update=${FORCE_UPDATE_FLAG} --field package_name=${PACKAGE_NAME} 2>/dev/null; then
+        echo "Workflow triggered successfully!"
+      else
+        echo "Error: Could not trigger the workflow directly."
+        echo "This could be because the workflow file has syntax errors or is not properly configured."
+        echo "Please check the workflow file and try again."
+        exit 1
+      fi
+      ;;
+    *)
+      echo "Update cancelled."
+      exit 0
+      ;;
+  esac
+elif gh workflow run "Update APT Package" --ref "${BRANCH_TO_USE}" --field force_update=${FORCE_UPDATE_FLAG} --field package_name=${PACKAGE_NAME} 2>/dev/null; then
   echo ""
   # Wait a moment for the workflow to be registered
   echo "Waiting for workflow to start..."

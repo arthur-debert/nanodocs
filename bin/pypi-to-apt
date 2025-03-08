@@ -235,16 +235,44 @@ def build_debian_package(output_dir: str, metadata: Dict[str, str], venv_path: s
     os.chmod(postinst_path, 0o755)
 
     # Copy the package files from the virtual environment to the package directory
-    site_packages_dir = os.path.join(venv_path, "lib", "python3.9", "site-packages")
+    # Find the Python version dynamically
+    python_path = os.path.join(venv_path, "bin", "python")
+    result = subprocess.run(
+        [python_path, "-c", "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    python_version = result.stdout.strip()
+
+    # Use the detected Python version
+    site_packages_dir = os.path.join(venv_path, "lib", python_version, "site-packages")
+
+    # Debug output
+    print(f"Looking for package in: {site_packages_dir}")
+    if os.path.exists(site_packages_dir):
+        print(f"Contents of site-packages: {os.listdir(site_packages_dir)}")
+    else:
+        print(f"Warning: {site_packages_dir} does not exist")
+
     package_source_dir = os.path.join(site_packages_dir, package_name)
     if os.path.exists(package_source_dir):
         # Copy the package directory
         shutil.copytree(package_source_dir, os.path.join(dist_packages_dir, package_name))
+        print(f"Copied package from {package_source_dir} to {os.path.join(dist_packages_dir, package_name)}")
 
         # Copy any .dist-info directory
         dist_info_dirs = [d for d in os.listdir(site_packages_dir) if d.startswith(f"{package_name}-") and d.endswith(".dist-info")]
         for dist_info_dir in dist_info_dirs:
             shutil.copytree(os.path.join(site_packages_dir, dist_info_dir), os.path.join(dist_packages_dir, dist_info_dir))
+            print(f"Copied {dist_info_dir} to {os.path.join(dist_packages_dir, dist_info_dir)}")
+    else:
+        print(f"Warning: Package source directory {package_source_dir} not found")
+        # Try to find the package in a different location
+        print(f"Searching for {package_name} in {site_packages_dir}...")
+        for item in os.listdir(site_packages_dir):
+            if item.lower() == package_name.lower() or item.startswith(f"{package_name.lower()}-"):
+                print(f"Found potential match: {item}")
 
     # Create a wrapper script in usr/bin
     wrapper_script = f"""#!/bin/bash

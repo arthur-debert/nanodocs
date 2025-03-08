@@ -86,6 +86,9 @@ jobs:
           chmod +x bin/about-py-package
           chmod +x bin/update-apt-package.sh
 
+          # Pull latest changes to get the updated script
+          git pull origin ${GITHUB_REF##*/}
+
           # Run the update script
           bin/update-apt-package.sh "$PACKAGE_NAME"
 
