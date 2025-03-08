@@ -75,11 +75,11 @@ jobs:
           pip install jinja2
 
           # Make scripts executable
-          chmod +x bin/pypi-to-brew
-          chmod +x bin/update-brew-formula.sh
+          chmod +x package-managers/brew/pypi-to-brew
+          chmod +x package-managers/brew/update-brew-formula.sh
 
           # Run the update script
-          bin/update-brew-formula.sh "$PACKAGE_NAME"
+          package-managers/brew/update-brew-formula.sh "$PACKAGE_NAME"
 
       - name: Commit and push changes
         shell: bash
@@ -108,7 +108,7 @@ jobs:
           fi
 
           # Check if there are changes to commit
-          if git diff --quiet Formula/$PACKAGE_NAME.rb; then
+          if git diff --quiet package-managers/brew/Formula/$PACKAGE_NAME.rb; then
             if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
               echo "No changes detected, but force_update is true. Proceeding with commit."
             else
@@ -117,6 +117,6 @@ jobs:
             fi
           fi
 
-          git add Formula/$PACKAGE_NAME.rb
+          git add package-managers/brew/Formula/$PACKAGE_NAME.rb
           git commit -m "Update Homebrew formula for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
           git push origin $BRANCH_NAME

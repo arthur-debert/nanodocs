@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+# Create a wrapper script
+cat >/usr/bin/nanodoc <<'EOF'
+#!/bin/bash
+python3 -m nanodoc "$@"
+EOF
+chmod 755 /usr/bin/nanodoc
+
+exit 0
