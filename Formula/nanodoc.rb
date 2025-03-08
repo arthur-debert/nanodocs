@@ -6,20 +6,24 @@ class Nanodoc < Formula
   license "MIT"
 
   depends_on "python@3"
-  depends_on "poetry"
 
   def install
-    system "poetry", "install"
+    # Install using pip
+    system "pip3", "install", "--prefix=#{prefix}", "nanodoc==#{version}"
 
-    # Create wrapper script for pmrun
-    (bin/"pmrun").write <<~EOS
+    # Create wrapper script that uses python -m nanodoc
+    (bin/"nanodoc").write <<~EOS
       #!/bin/bash
-      cd #{prefix} && poetry run pmrun "$@"
+      python3 -m nanodoc "$@"
     EOS
-    chmod 0755, bin/"pmrun"
+    chmod 0755, bin/"nanodoc"
   end
 
   test do
-    system "#{bin}/pmrun", "--help"
+    # Test using the wrapper script
+    system bin/"nanodoc", "--help"
+
+    # Also test using python -m directly
+    system "python3", "-m", "nanodoc", "--help"
   end
 end
