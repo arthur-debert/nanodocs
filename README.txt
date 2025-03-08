@@ -87,8 +87,19 @@ brew install nanodoc
 # To update to the latest version
 brew update && brew upgrade nanodoc
 
-# Using apt (Debian/Ubuntu)
-apt-get install nanodoc
+# Using apt (Debian/Ubuntu) - Direct installation
+wget https://github.com/arthur-debert/nanodoc/raw/main/Debian/python3-nanodoc_0.3.1-1_all.deb
+sudo apt install ./python3-nanodoc_0.3.1-1_all.deb
+
+# Using apt (Debian/Ubuntu) - Add as repository
+# Add the repository to your sources
+echo "deb [trusted=yes] https://raw.githubusercontent.com/arthur-debert/nanodoc/main/Debian ./" | sudo tee /etc/apt/sources.list.d/nanodoc.list
+# Update package lists
+sudo apt update
+# Install the package
+sudo apt install python3-nanodoc
+
+# For more detailed APT installation instructions, see README-apt-repo.md
 
 
 ## Contributing
