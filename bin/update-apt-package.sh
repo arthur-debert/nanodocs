@@ -27,7 +27,7 @@ if [ -f /etc/debian_version ]; then
   echo "Testing the Debian package..."
 
   # Install the package
-  sudo apt install -y $OUTPUT_DIR/python3-$PACKAGE_NAME*.deb
+  sudo apt install -y ./$OUTPUT_DIR/python3-$PACKAGE_NAME*.deb
 
   # Test the package by running it with --help
   python3 -m $PACKAGE_NAME --help
@@ -35,5 +35,5 @@ if [ -f /etc/debian_version ]; then
   echo "Package test completed successfully"
 else
   echo "Not running on a Debian-based system, skipping package test"
-  echo "To test the package, run: sudo apt install -y $OUTPUT_DIR/python3-$PACKAGE_NAME*.deb"
+  echo "To test the package, run: sudo apt install -y ./$OUTPUT_DIR/python3-$PACKAGE_NAME*.deb"
 fi
