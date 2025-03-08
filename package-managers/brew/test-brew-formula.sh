@@ -3,12 +3,16 @@
 
 set -e
 
-# Ensure we're in the project root
-cd "$(dirname "$0")/.."
+# Get the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get the package-managers directory (parent of brew)
+PACKAGE_MANAGERS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Get the repository root (parent of package-managers)
+REPO_ROOT="$(cd "$PACKAGE_MANAGERS_DIR/.." && pwd)"
 
 # Default package name is nanodoc if not provided
 PACKAGE_NAME=${1:-nanodoc}
-FORMULA_PATH="Formula/${PACKAGE_NAME}.rb"
+FORMULA_PATH="${SCRIPT_DIR}/Formula/${PACKAGE_NAME}.rb"
 
 # Check if the formula exists
 if [ ! -f "$FORMULA_PATH" ]; then

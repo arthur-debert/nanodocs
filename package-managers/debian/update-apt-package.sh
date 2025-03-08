@@ -7,6 +7,7 @@ set -e
 # Get the package name from the command line or use default
 PACKAGE_NAME=${1:-nanodoc}
 OUTPUT_DIR="package-managers/debian"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
@@ -22,17 +23,22 @@ package-managers/debian/pypi-to-apt "$PACKAGE_NAME" --output-dir "$OUTPUT_DIR"
 
 echo "Debian package for $PACKAGE_NAME has been generated in $OUTPUT_DIR"
 
-# Test the package if we're running in a Debian-based environment
+# Test the package using the dedicated test script
 if [ -f /etc/debian_version ]; then
-  echo "Testing the Debian package..."
+  echo "Running comprehensive tests for the Debian package..."
 
-  # Install the package
-  sudo apt install -y ./$OUTPUT_DIR/python3-$PACKAGE_NAME*.deb
+  # Make the test script executable
+  chmod +x "$SCRIPT_DIR/test-apt-package.sh"
 
-  # Test the package by running it with --help
-  python3 -m $PACKAGE_NAME --help
+  # Run the test script
+  "$SCRIPT_DIR/test-apt-package.sh" "$PACKAGE_NAME"
 
-  echo "Package test completed successfully"
+  if [ $? -ne 0 ]; then
+    echo "❌ Package tests failed."
+    exit 1
+  fi
+
+  echo "✅ Package tests completed successfully."
 else
   echo "Not running on a Debian-based system, skipping package test"
   echo "To test the package, run: sudo apt install -y ./$OUTPUT_DIR/python3-$PACKAGE_NAME*.deb"

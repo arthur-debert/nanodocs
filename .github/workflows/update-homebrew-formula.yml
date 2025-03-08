@@ -81,6 +81,26 @@ jobs:
           # Run the update script
           package-managers/brew/update-brew-formula.sh "$PACKAGE_NAME"
 
+      - name: Test Homebrew formula
+        shell: bash
+        run: |
+          # Get package name from previous step
+          PACKAGE_NAME="${{ steps.generate_formula.outputs.package_name }}"
+          echo "Running comprehensive tests for Homebrew formula: $PACKAGE_NAME"
+
+          # Make the test script executable
+          chmod +x package-managers/brew/test-brew-formula.sh
+
+          # Run the test script
+          package-managers/brew/test-brew-formula.sh "$PACKAGE_NAME"
+
+          if [ $? -ne 0 ]; then
+            echo "❌ Formula tests failed. Not proceeding with commit."
+            exit 1
+          fi
+
+          echo "✅ Formula tests completed successfully. Proceeding with commit."
+
       - name: Commit and push changes
         shell: bash
         run: |

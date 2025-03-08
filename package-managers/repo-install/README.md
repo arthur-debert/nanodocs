@@ -26,7 +26,8 @@ The `setup.sh` script performs the following actions:
    the package management scripts
 3. Updates GitHub workflow files if they exist to point to the new script
    locations
-4. Copies the LICENSE file to the bin directory
+4. Sets up test scripts for both APT and Homebrew packages
+5. Copies the LICENSE file to the bin directory
 
 ## After Setup
 
@@ -47,6 +48,8 @@ your-repo/
 │   ├── about-py-package
 │   ├── apt-update
 │   ├── brew-update
+│   ├── test-apt-package.sh
+│   ├── test-brew-formula.sh
 │   └── ...
 ├── Formula -> package-managers/brew/Formula  # Symlink
 └── package-managers/
@@ -54,12 +57,14 @@ your-repo/
     │   ├── Formula/
     │   │   └── nanodoc.rb
     │   ├── brew-update
+    │   ├── test-brew-formula.sh
     │   └── ...
     ├── common/                    # Shared scripts
     │   ├── about-py-package
     │   └── ...
     ├── debian/                    # Debian/APT-related files
     │   ├── apt-update
+    │   ├── test-apt-package.sh
     │   └── ...
     └── repo-install/              # Setup scripts
         ├── README.md

@@ -40,7 +40,7 @@ EOF
 done
 
 # Create wrapper scripts for debian-related scripts
-for script in apt-update docker-apt-build pypi-to-apt setup-apt-repo.sh update-apt-package.sh; do
+for script in apt-update docker-apt-build pypi-to-apt setup-apt-repo.sh update-apt-package.sh test-apt-package.sh; do
   echo "Creating wrapper for $script..."
   cat >"$REPO_ROOT/bin/$script" <<EOF
 #!/bin/bash

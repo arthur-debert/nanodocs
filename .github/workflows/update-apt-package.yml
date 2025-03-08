@@ -97,18 +97,20 @@ jobs:
         run: |
           # Get package name from previous step
           PACKAGE_NAME="${{ steps.generate_package.outputs.package_name }}"
-          echo "Testing APT package for: $PACKAGE_NAME"
+          echo "Running comprehensive tests for APT package: $PACKAGE_NAME"
 
-          # Install the package
-          sudo apt install -y ./package-managers/debian/python3-$PACKAGE_NAME*.deb
+          # Make the test script executable
+          chmod +x package-managers/debian/test-apt-package.sh
 
-          # Test the package by running it with --help
-          python3 -m $PACKAGE_NAME --help
+          # Run the test script
+          package-managers/debian/test-apt-package.sh "$PACKAGE_NAME"
 
-          # Additional tests could be added here
-          # For example, running specific tests for the package
+          if [ $? -ne 0 ]; then
+            echo "❌ Package tests failed. Not proceeding with commit."
+            exit 1
+          fi
 
-          echo "Package test completed successfully"
+          echo "✅ Package tests completed successfully. Proceeding with commit."
 
       - name: Commit and push changes
         shell: bash
