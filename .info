@@ -1,3 +1,3 @@
-README.md This is our intro.
-test These are the test files
-samples/cake.txt Best cakes
+test These should not be installed
+bin/nanodoc this is a shell scripts that calls the actual command python3 -m nanodoc
+pyproject.toml uses poetry for dep management + virtual env, it creates the .venv on the local dir

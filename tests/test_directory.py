@@ -1,6 +1,5 @@
-import pytest
-import os
-from nanodoc.nanodoc import expand_directory, expand_args
+from nanodoc.files import expand_args, expand_directory
+
 
 def test_expand_directory(tmpdir):
     # Create directory structure
@@ -18,39 +17,43 @@ def test_expand_directory(tmpdir):
     # Call expand_directory
     expanded_files = expand_directory(str(dir_path))
 
-    # Assert that only .txt and .md files are included, and nested files are included
+    # Assert that only .txt and .md files are included, and nested files too
     assert str(test_file_txt) in expanded_files
     assert str(test_file_md) in expanded_files
     assert str(nested_file_txt) in expanded_files
     assert str(test_file_other) not in expanded_files
+
 
 def test_expand_directory_empty(tmpdir):
     dir_path = tmpdir.mkdir("empty_dir")
     expanded_files = expand_directory(str(dir_path))
     assert expanded_files == []
 
+
 def test_expand_args_file(tmpdir):
     # Create a test file
     test_file = tmpdir.join("test_file.txt")
     test_file.write("test")
-    
+
     # Call expand_args with a file path
     expanded_files = expand_args([str(test_file)])
-    
+
     # Assert that the file path is returned as a single-item list
     assert expanded_files == [str(test_file)]
+
 
 def test_expand_args_directory(tmpdir):
     # Create directory structure
     dir_path = tmpdir.mkdir("test_dir")
     test_file_txt = dir_path.join("test_file.txt")
     test_file_txt.write("test")
-    
+
     # Call expand_args with a directory path
     expanded_files = expand_args([str(dir_path)])
-    
+
     # Assert that the directory is expanded to include the file
     assert str(test_file_txt) in expanded_files
+
 
 def test_expand_args_bundle(tmpdir):
     # Create a bundle file
@@ -58,12 +61,13 @@ def test_expand_args_bundle(tmpdir):
     test_file = tmpdir.join("test_file.txt")
     test_file.write("test")
     bundle_file.write(str(test_file))
-    
+
     # Call expand_args with a bundle file path
     expanded_files = expand_args([str(bundle_file)])
-    
+
     # Assert that the bundle is expanded to include the file
     assert str(test_file) in expanded_files
+
 
 def test_expand_directory_with_extensions(tmpdir):
     # Create directory structure

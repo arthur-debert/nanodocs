@@ -1,9 +1,7 @@
-import pytest
-import os
-from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, get_files_from_args, logger, setup_logging
-import sys
-from io import StringIO
-import logging
+from nanodoc.core import process_all
+from nanodoc.files import get_files_from_args
+from nanodoc.formatting import create_header
+
 
 def test_init_bundles_no_line_numbers(tmpdir):
     # Create test files
@@ -29,6 +27,7 @@ def test_init_bundles_no_line_numbers(tmpdir):
     assert "3:" not in result
     assert "4:" not in result
 
+
 def test_init_bundles_file_line_numbers(tmpdir):
     # Create test files
     test_file1 = tmpdir.join("test_file1.txt")
@@ -49,6 +48,7 @@ def test_init_bundles_file_line_numbers(tmpdir):
     assert "1: Line 3" in result
     assert "2: Line 4" in result
 
+
 def test_init_bundles_all_line_numbers(tmpdir):
     # Create test files
     test_file1 = tmpdir.join("test_file1.txt")
@@ -68,6 +68,7 @@ def test_init_bundles_all_line_numbers(tmpdir):
     assert "2: Line 2" in result
     assert "3: Line 3" in result
     assert "4: Line 4" in result
+
 
 def test_init_bundles_toc(tmpdir):
     # Create test files
@@ -91,5 +92,3 @@ def test_init_bundles_toc(tmpdir):
     assert "Line 2" in result
     assert "Line 3" in result
     assert "Line 4" in result
-
-

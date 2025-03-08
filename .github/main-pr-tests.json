@@ -3,7 +3,7 @@
   "name": "main-pr-tests",
   "target": "branch",
   "source_type": "Repository",
-  "source": "arthur-debert/nanodocs",
+  "source": "arthur-debert/nanodoc",
   "enforcement": "active",
   "conditions": {
     "ref_name": {
