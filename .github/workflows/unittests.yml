@@ -24,9 +24,18 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          ${{ github.event_name == 'workflow_dispatch' && fromJSON('["' +
-          github.event.inputs.python-version + '"]') || ['3.9', '3.12'] }}
+        include:
+          - python-version: 3.9
+          - python-version: 3.12
+        exclude:
+          - python-version: 3.9
+            if:
+              github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.python-version != '3.9'
+          - python-version: 3.12
+            if:
+              github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.python-version != '3.12'
       fail-fast: false
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # yamllint disable-line rule:truthy
