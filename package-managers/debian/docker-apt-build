@@ -1,0 +1,45 @@
+#!/bin/bash
+# Docker-based Debian Package Builder
+#
+# This script builds a Docker image for Debian package building and runs a container
+# with the current project directory mounted as a volume. It can be used to build
+# Debian packages from PyPI packages using the pypi-to-apt script.
+#
+# Usage: bin/docker-apt-build <package_name>
+# Example: bin/docker-apt-build nanodoc
+
+set -e
+
+# Get the package name from the command line
+PACKAGE_NAME=$1
+
+if [ -z "$PACKAGE_NAME" ]; then
+  echo "Usage: $0 <package_name>"
+  echo "Example: $0 nanodoc"
+  exit 1
+fi
+
+# Get the project root directory (parent of bin/)
+PROJECT_ROOT=$(dirname "$(dirname "$(readlink -f "$0")")")
+
+# Build the Docker image
+echo "Building Docker image..."
+docker build -t pypi-to-apt -f "$PROJECT_ROOT/Dockerfile.apt" "$PROJECT_ROOT"
+
+# Run the container with the project directory mounted as a volume
+echo "Running Docker container..."
+docker run --rm -it \
+  -v "$PROJECT_ROOT:/app" \
+  pypi-to-apt \
+  -c "cd /app && \
+        chmod +x /app/bin/pypi-to-apt && \
+        chmod +x /app/bin/about-py-package && \
+        echo 'Building Debian package for $PACKAGE_NAME...' && \
+        /app/bin/pypi-to-apt $PACKAGE_NAME && \
+        echo 'Package built successfully!' && \
+        echo 'Installing and testing package...' && \
+        apt-get install -y /tmp/debian-build/python3-*.deb && \
+        echo 'Package installed successfully!' && \
+        echo 'Testing package with --help...' && \
+        python3 -m $PACKAGE_NAME --help && \
+        echo 'Package test completed successfully!'"

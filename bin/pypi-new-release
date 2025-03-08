@@ -1,77 +1,9 @@
 #!/bin/bash
-# Script to trigger a new PyPI release using GitHub Actions
+# Wrapper script for package-managers/common/pypi-new-release
 
-set -e
+# Get the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Ensure we're in the project root
-cd "$(dirname "$0")/.."
-
-# Check if gh CLI is installed
-if ! command -v gh &>/dev/null; then
-  echo "Error: GitHub CLI (gh) is not installed."
-  echo "Please install it from https://cli.github.com/"
-  exit 1
-fi
-
-# Check if user is authenticated with GitHub
-if ! gh auth status &>/dev/null; then
-  echo "Error: You are not authenticated with GitHub CLI."
-  echo "Please run 'gh auth login' first."
-  exit 1
-fi
-
-# Get the current branch
-CURRENT_BRANCH=$(git branch --show-current)
-if [[ -z ${CURRENT_BRANCH} ]]; then
-  echo "Error: Could not determine current branch."
-  exit 1
-fi
-
-# Get the current version from pyproject.toml
-VERSION=$(poetry version -s)
-if [[ -z ${VERSION} ]]; then
-  echo "Error: Could not determine current version from pyproject.toml."
-  exit 1
-fi
-
-echo "Current version: ${VERSION}"
-echo "Current branch: ${CURRENT_BRANCH}"
-echo "This will trigger a PyPI release for version ${VERSION} from branch ${CURRENT_BRANCH}."
-read -r -p "Continue? (y/n): " CONFIRM
-
-if [[ ${CONFIRM} != "y" && ${CONFIRM} != "Y" ]]; then
-  echo "Release cancelled."
-  exit 0
-fi
-
-# Trigger the workflow
-echo "Triggering PyPI publish workflow..."
-gh workflow run "Publish to PyPI" --ref "${CURRENT_BRANCH}"
-echo ""
-
-# Wait a moment for the workflow to be registered
-echo "Waiting for workflow to start..."
-sleep 2
-
-# Get the run ID of the latest workflow
-RUN_ID=$(gh run list --workflow="Publish to PyPI" --limit 1 --json databaseId --jq '.[0].databaseId')
-
-# Display the status of the workflow run
-echo "Latest workflow run status:"
-echo ""
-gh run list --workflow="Publish to PyPI" --limit 1
-
-if [[ -n ${RUN_ID} ]]; then
-  echo ""
-  echo "You can check the detailed status with:"
-  echo "gh run view ${RUN_ID}"
-  echo ""
-  echo "To watch the workflow progress in real-time:"
-  echo "gh run watch ${RUN_ID}"
-
-  # Ask if the user wants to watch the workflow
-  read -r -p "Do you want to watch the workflow progress? (y/n): " WATCH
-  if [[ ${WATCH} == "y" || ${WATCH} == "Y" ]]; then
-    gh run watch "${RUN_ID}"
-  fi
-fi
+# Execute the actual script with all arguments passed through
+"$PROJECT_ROOT/package-managers/common/pypi-new-release" "$@"

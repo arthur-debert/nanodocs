@@ -82,33 +82,35 @@ jobs:
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
 
           # Make scripts executable
-          chmod +x bin/pypi-to-apt
-          chmod +x bin/about-py-package
-          chmod +x bin/update-apt-package.sh
+          chmod +x package-managers/debian/pypi-to-apt
+          chmod +x package-managers/common/about-py-package
+          chmod +x package-managers/debian/update-apt-package.sh
 
           # Pull latest changes to get the updated script
           git pull origin ${GITHUB_REF##*/}
 
           # Run the update script
-          bin/update-apt-package.sh "$PACKAGE_NAME"
+          package-managers/debian/update-apt-package.sh "$PACKAGE_NAME"
 
       - name: Test APT package
         shell: bash
         run: |
           # Get package name from previous step
           PACKAGE_NAME="${{ steps.generate_package.outputs.package_name }}"
-          echo "Testing APT package for: $PACKAGE_NAME"
+          echo "Running comprehensive tests for APT package: $PACKAGE_NAME"
 
-          # Install the package
-          sudo apt install -y ./Debian/python3-$PACKAGE_NAME*.deb
+          # Make the test script executable
+          chmod +x package-managers/debian/test-apt-package.sh
 
-          # Test the package by running it with --help
-          python3 -m $PACKAGE_NAME --help
+          # Run the test script
+          package-managers/debian/test-apt-package.sh "$PACKAGE_NAME"
 
-          # Additional tests could be added here
-          # For example, running specific tests for the package
+          if [ $? -ne 0 ]; then
+            echo "❌ Package tests failed. Not proceeding with commit."
+            exit 1
+          fi
 
-          echo "Package test completed successfully"
+          echo "✅ Package tests completed successfully. Proceeding with commit."
 
       - name: Commit and push changes
         shell: bash
@@ -137,7 +139,7 @@ jobs:
           fi
 
           # Check if there are changes to commit
-          if git diff --quiet Debian/; then
+          if git diff --quiet package-managers/debian/; then
             if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
               echo "No changes detected, but force_update is true. Proceeding with commit."
             else
@@ -146,6 +148,6 @@ jobs:
             fi
           fi
 
-          git add Debian/
+          git add package-managers/debian/
           git commit -m "Update APT package for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
           git push origin $BRANCH_NAME
