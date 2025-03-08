@@ -1,7 +1,7 @@
 name: Publish to PyPI
 
 on:
-  # Simple workflow dispatch without version inputs
+  # Simple workflow dispatch without inputs
   workflow_dispatch:
 
 permissions:
@@ -13,6 +13,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          # Fetch all history for proper versioning
+          fetch-depth: 0
+          # Use PAT for better permissions
+          token: ${{ secrets.PAT }}
 
       - name: Setup Python environment
         uses: ./.github/actions/setup-python-poetry # Reference your composite action
@@ -55,13 +60,18 @@ jobs:
           name:
             "Release v${{ steps.determine_version.outputs.release_version }}"
 
+      # Only trigger if UPDATES_HOMEBREW repository variable is set
       - name: Trigger Homebrew Formula Update
+        if: ${{ vars.UPDATES_HOMEBREW == 'true' }}
         uses: peter-evans/repository-dispatch@v2
         with:
           # Using the PAT secret for repository dispatch
           token: ${{ secrets.PAT }}
           event-type: pypi-published
-          client-payload:
-            '{"version": "${{ steps.determine_version.outputs.release_version
-            }}"}'
+          client-payload: >-
+            {
+              "version": "${{ steps.determine_version.outputs.release_version
+            }}",
+              "branch": "${{ github.ref_name }}"
+            }
           repository: ${{ github.repository }}

@@ -12,6 +12,8 @@ on:
     workflows: ["Publish to PyPI"]
     types:
       - completed
+    branches:
+      - "**" # This will match all branches
   # Add manual trigger option for testing
   workflow_dispatch:
     inputs:
@@ -40,8 +42,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          # Fetch all history for proper versioning
+          # Fetch all history and branches for proper versioning
           fetch-depth: 0
+          # Use the branch from the repository-dispatch event if available, otherwise use the current ref
+          ref: ${{ github.event.client_payload.branch || github.ref }}
           # Use PAT for better permissions
           token: ${{ secrets.PAT }}
 
@@ -78,6 +82,22 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
+          # Get current branch name
+          BRANCH_NAME=$(git symbolic-ref --short HEAD)
+          echo "Current branch: $BRANCH_NAME"
+
+          # If we're on a detached HEAD (which can happen with repository_dispatch),
+          # use the branch name from the event payload or default to main
+          if [ "$BRANCH_NAME" = "HEAD" ]; then
+            if [ -n "${{ github.event.client_payload.branch }}" ]; then
+              BRANCH_NAME="${{ github.event.client_payload.branch }}"
+            else
+              BRANCH_NAME="main"
+            fi
+            echo "Using branch from payload or default: $BRANCH_NAME"
+            git checkout -B $BRANCH_NAME
+          fi
+
           # Check if there are changes to commit
           if git diff --quiet Formula/$PACKAGE_NAME.rb; then
             if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
@@ -90,4 +110,4 @@ jobs:
 
           git add Formula/$PACKAGE_NAME.rb
           git commit -m "Update Homebrew formula for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
-          git push
+          git push origin $BRANCH_NAME
