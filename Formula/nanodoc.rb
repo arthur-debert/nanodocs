@@ -1,5 +1,3 @@
-  Downloading nanodoc-0.3.1-py3-none-any.whl.metadata (4.8 kB)
-Downloading nanodoc-0.3.1-py3-none-any.whl (14 kB)
 class Nanodoc < Formula
   desc "A minimalist document bundler designed for stitching hints, reminders and short docs."
   homepage "https://github.com/arthur-debert/nanodoc/"
