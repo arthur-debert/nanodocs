@@ -9,6 +9,8 @@ import os
 from typing import List, Tuple
 
 from nanodoc.data import ContentItem, LineRange
+from nanodoc.data import get_content as get_item_content
+from nanodoc.data import validate_content_item
 
 logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
@@ -177,7 +179,7 @@ def verify_content(content_item: ContentItem) -> ContentItem:
         IsADirectoryError: If the path is a directory
         ValueError: If a line reference is invalid or out of range
     """
-    content_item.validate()
+    validate_content_item(content_item)
     return content_item
 
 
@@ -207,7 +209,7 @@ def get_file_content(file_path, line=None, start=None, end=None, parts=None):
 
     # If we have a ContentItem, use its get_content method
     if isinstance(file_path, ContentItem):
-        return file_path.get_content()
+        return get_item_content(file_path)
 
     try:
         with open(file_path, "r") as f:

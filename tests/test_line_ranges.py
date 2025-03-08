@@ -1,6 +1,6 @@
 import pytest
 
-from nanodoc.data import LineRange
+from nanodoc.data import LineRange, validate_content_item
 from nanodoc.files import create_content_item, get_file_content, parse_line_reference
 
 
@@ -141,17 +141,17 @@ def test_verify_path_with_line_reference_invalid(tmpdir):
 
     # Invalid line number (too high)
     with pytest.raises(ValueError) as excinfo:
-        create_content_item(f"{file_path}:L10").validate()
+        validate_content_item(create_content_item(f"{file_path}:L10"))
     assert "Line reference out of range" in str(excinfo.value)
 
     # Invalid range (end too high)
     with pytest.raises(ValueError) as excinfo:
-        create_content_item(f"{file_path}:L2-10").validate()
+        validate_content_item(create_content_item(f"{file_path}:L2-10"))
     assert "Line reference out of range" in str(excinfo.value)
 
     # Invalid multiple (one invalid)
     with pytest.raises(ValueError) as excinfo:
-        create_content_item(f"{file_path}:L1,L10").validate()
+        validate_content_item(create_content_item(f"{file_path}:L1,L10"))
     assert "Line reference out of range" in str(excinfo.value)
 
     # Invalid characters after line number
@@ -166,5 +166,5 @@ def test_verify_path_with_line_reference_invalid(tmpdir):
 
     # Non-existent file with line reference
     with pytest.raises(FileNotFoundError) as excinfo:
-        create_content_item("nonexistent_file.txt:L5").validate()
+        validate_content_item(create_content_item("nonexistent_file.txt:L5"))
     assert "File not found" in str(excinfo.value)

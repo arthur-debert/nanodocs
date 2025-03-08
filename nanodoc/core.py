@@ -2,7 +2,13 @@ import logging
 import os
 from typing import List, Optional, Tuple
 
-from .data import ContentItem
+from .data import (
+    ContentItem,
+    get_content,
+    is_full_file,
+    line_range_to_string,
+    normalize_line_range,
+)
 from .formatting import apply_style_to_filename, create_header
 
 logger = logging.getLogger("nanodoc")
@@ -59,7 +65,7 @@ def generate_table_of_contents(content_items: List[ContentItem], style=None):
         # Calculate total content lines
         total_lines = 0
         for item in items:
-            content = item.get_content()
+            content = get_content(item)
             file_lines = len(content.splitlines())
             total_lines += file_lines
             # Add a blank line between ranges if there are multiple ranges
@@ -98,7 +104,7 @@ def generate_table_of_contents(content_items: List[ContentItem], style=None):
             for i, item in enumerate(items):
                 range_info = []
                 for range_obj in item.ranges:
-                    range_info.append(range_obj.to_string())
+                    range_info.append(line_range_to_string(range_obj))
                 range_str = ", ".join(range_info)
 
                 # Indent the subentry and use a letter index (a, b, c, ...)
@@ -136,11 +142,11 @@ def process_file(
     """
     logger.debug(
         f"Processing file: {content_item.file_path}, line_number_mode: {line_number_mode}, "
-        f"line_counter: {line_counter}, ranges: {[r.to_string() for r in content_item.ranges]}"
+        f"line_counter: {line_counter}, ranges: {[line_range_to_string(r) for r in content_item.ranges]}"
     )
     try:
         # Get the content from the ContentItem
-        content_item.get_content()
+        get_content(content_item)
 
         # We need to get all lines to determine the actual line numbers
         with open(content_item.file_path, "r") as f:
@@ -150,7 +156,7 @@ def process_file(
         lines_with_numbers = []
         for range_obj in content_item.ranges:
             max_lines = len(all_lines)
-            start, end = range_obj.normalize(max_lines)
+            start, end = normalize_line_range(range_obj, max_lines)
             for i in range(start - 1, end):
                 if i < len(all_lines):
                     lines_with_numbers.append((i + 1, all_lines[i]))
@@ -184,7 +190,7 @@ def process_file(
         output += line_number + line
 
     # Add a blank line if this is a partial content item (not a full file)
-    if not (len(content_item.ranges) == 1 and content_item.ranges[0].is_full_file()):
+    if not (len(content_item.ranges) == 1 and is_full_file(content_item.ranges[0])):
         output += "\n"
 
     return output, len(lines_with_numbers)

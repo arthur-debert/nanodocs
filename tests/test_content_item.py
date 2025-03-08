@@ -1,6 +1,15 @@
 import pytest
 
-from nanodoc.data import ContentItem, LineRange
+from nanodoc.data import (
+    ContentItem,
+    LineRange,
+    get_content,
+    is_full_file,
+    is_single_line,
+    line_range_to_string,
+    normalize_line_range,
+    validate_content_item,
+)
 from nanodoc.files import (
     create_content_item,
     get_files_from_args,
@@ -20,8 +29,8 @@ def test_line_range_is_single_line():
     # Test is_single_line method
     single_line = LineRange(5, 5)
     range_line = LineRange(5, 10)
-    assert single_line.is_single_line() is True
-    assert range_line.is_single_line() is False
+    assert is_single_line(single_line) is True
+    assert is_single_line(range_line) is False
 
 
 def test_line_range_is_full_file():
@@ -29,9 +38,9 @@ def test_line_range_is_full_file():
     full_file = LineRange(1, "X")
     partial_file = LineRange(5, "X")
     normal_range = LineRange(1, 10)
-    assert full_file.is_full_file() is True
-    assert partial_file.is_full_file() is False
-    assert normal_range.is_full_file() is False
+    assert is_full_file(full_file) is True
+    assert is_full_file(partial_file) is False
+    assert is_full_file(normal_range) is False
 
 
 def test_line_range_normalize():
@@ -40,9 +49,9 @@ def test_line_range_normalize():
     partial_file = LineRange(5, "X")
     normal_range = LineRange(1, 10)
 
-    assert full_file.normalize(20) == (1, 20)
-    assert partial_file.normalize(20) == (5, 20)
-    assert normal_range.normalize(20) == (1, 10)
+    assert normalize_line_range(full_file, 20) == (1, 20)
+    assert normalize_line_range(partial_file, 20) == (5, 20)
+    assert normalize_line_range(normal_range, 20) == (1, 10)
 
 
 def test_line_range_to_string():
@@ -51,9 +60,9 @@ def test_line_range_to_string():
     range_line = LineRange(5, 10)
     full_file = LineRange(1, "X")
 
-    assert single_line.to_string() == "L5"
-    assert range_line.to_string() == "L5-10"
-    assert full_file.to_string() == "L1-X"
+    assert line_range_to_string(single_line) == "L5"
+    assert line_range_to_string(range_line) == "L5-10"
+    assert line_range_to_string(full_file) == "L1-X"
 
 
 def test_parse_line_reference_single_line():
@@ -147,17 +156,17 @@ def test_content_item_validate(tmpdir):
 
     # Valid ContentItem
     content_item = ContentItem(file_path, file_path, [LineRange(1, 5)])
-    assert content_item.validate() is True
+    assert validate_content_item(content_item) is True
 
     # Invalid line range (out of bounds)
     content_item = ContentItem(file_path, file_path, [LineRange(1, 10)])
     with pytest.raises(ValueError):
-        content_item.validate()
+        validate_content_item(content_item)
 
     # Invalid file path
     content_item = ContentItem("nonexistent.txt", "nonexistent.txt", [LineRange(1, 5)])
     with pytest.raises(FileNotFoundError):
-        content_item.validate()
+        validate_content_item(content_item)
 
 
 def test_content_item_get_content(tmpdir):
@@ -168,19 +177,19 @@ def test_content_item_get_content(tmpdir):
 
     # Full file
     content_item = ContentItem(file_path, file_path, [LineRange(1, "X")])
-    assert content_item.get_content() == "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"
+    assert get_content(content_item) == "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"
 
     # Single line
     content_item = ContentItem(file_path, file_path, [LineRange(3, 3)])
-    assert content_item.get_content() == "Line 3"
+    assert get_content(content_item) == "Line 3"
 
     # Range
     content_item = ContentItem(file_path, file_path, [LineRange(2, 4)])
-    assert content_item.get_content() == "Line 2\nLine 3\nLine 4"
+    assert get_content(content_item) == "Line 2\nLine 3\nLine 4"
 
     # Multiple ranges
     content_item = ContentItem(file_path, file_path, [LineRange(1, 1), LineRange(3, 4)])
-    assert content_item.get_content() == "Line 1\nLine 3\nLine 4"
+    assert get_content(content_item) == "Line 1\nLine 3\nLine 4"
 
 
 def test_create_content_item(tmpdir):
@@ -193,7 +202,7 @@ def test_create_content_item(tmpdir):
     content_item = create_content_item(file_path)
     assert content_item.file_path == file_path
     assert len(content_item.ranges) == 1
-    assert content_item.ranges[0].is_full_file() is True
+    assert is_full_file(content_item.ranges[0]) is True
 
     # Single line
     content_item = create_content_item(f"{file_path}:L3")
