@@ -5,18 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      python-version:
-        description: "Python version to use"
-        required: false
-        default: "3.9"
-        type: choice
-        options:
-          - "3.9"
-          - "3.12"
       debug:
         description: "Enable debug mode"
         required: false
-        default: "false"
+        default: false
         type: boolean
 
 jobs:
@@ -24,18 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - python-version: 3.9
-          - python-version: 3.12
-        exclude:
-          - python-version: 3.9
-            if:
-              github.event_name == 'workflow_dispatch' &&
-              github.event.inputs.python-version != '3.9'
-          - python-version: 3.12
-            if:
-              github.event_name == 'workflow_dispatch' &&
-              github.event.inputs.python-version != '3.12'
+        python-version: ["3.9", "3.12"]
       fail-fast: false
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # yamllint disable-line rule:truthy
