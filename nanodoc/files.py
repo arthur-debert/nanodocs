@@ -27,6 +27,12 @@ def parse_line_reference(line_ref):
     if not line_ref:
         raise ValueError("Empty line reference")
 
+    # Check for invalid characters in the line reference
+    valid_chars = set("L0123456789,-")
+    for char in line_ref:
+        if char not in valid_chars:
+            raise ValueError(f"Invalid character in line reference: '{char}'")
+
     parts = []
     for part in line_ref.split(","):
         if not part.startswith("L"):
@@ -38,7 +44,11 @@ def parse_line_reference(line_ref):
         if "-" in num_part:
             # Range reference
             try:
-                start, end = map(int, num_part.split("-"))
+                range_parts = num_part.split("-")
+                if len(range_parts) != 2:
+                    raise ValueError(f"Invalid range format: {part}")
+
+                start, end = map(int, range_parts)
                 if start <= 0 or end <= 0:
                     raise ValueError(f"Line numbers must be positive: {part}")
                 if start > end:
@@ -53,6 +63,9 @@ def parse_line_reference(line_ref):
         else:
             # Single line reference
             try:
+                # Check if num_part contains only digits
+                if not num_part.isdigit():
+                    raise ValueError(f"Invalid line number format: {part}")
                 line_num = int(num_part)
                 if line_num <= 0:
                     raise ValueError(f"Line number must be positive: {part}")
@@ -289,7 +302,10 @@ def verify_path(path):
         path (str): The file path to verify.
 
     Returns:
-        str: The verified path (without line reference).
+        str or tuple: If called from older code, returns just the verified path.
+                     If called from newer code that expects line parts, returns
+                     a tuple (str, list or None) with the verified path and line parts.
+                     Line parts is a list of (start, end) tuples or None if no line reference.
 
     Raises:
         FileNotFoundError: If the path does not exist.
@@ -302,10 +318,23 @@ def verify_path(path):
     # Check if the path includes a line reference
     file_path = path
     line_ref = None
+    line_parts = None
 
     if ":L" in path:
-        file_path, line_ref = path.split(":L", 1)
-        line_ref = "L" + line_ref
+        parts = path.split(":", 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid path format: {path}")
+
+        file_path = parts[0]
+        line_spec = parts[1]
+
+        # Ensure the line spec starts with 'L'
+        if not line_spec.startswith("L"):
+            raise ValueError(
+                f"Invalid line reference format: {line_spec} (must start with 'L')"
+            )
+
+        line_ref = line_spec
 
     # Verify the file path
     if not os.path.exists(file_path):
@@ -320,13 +349,13 @@ def verify_path(path):
     # Validate line reference if present
     if line_ref:
         try:
-            parts = parse_line_reference(line_ref)
+            line_parts = parse_line_reference(line_ref)
             # Validate that all referenced lines exist in the file
-            get_file_content(file_path, parts=parts)
+            get_file_content(file_path, parts=line_parts)
         except ValueError as e:
             raise ValueError(f"Invalid line reference in {path}: {str(e)}")
 
-    return file_path
+    return file_path, line_parts
 
 
 def file_sort_key(path):
@@ -345,7 +374,14 @@ def get_files_from_args(srcs):
         srcs (list): List of source file paths, directories, or bundle files.
 
     Returns:
-        list: A list of verified file paths.
+        list: A list of tuples (file_path, line_parts) where line_parts is a list of
+              (start, end) tuples or None if no line reference.
+
+    Raises:
+        FileNotFoundError: If a file path does not exist.
+        PermissionError: If a file is not readable.
+        IsADirectoryError: If a path is a directory, not a file.
+        ValueError: If a line reference is invalid or out of range.
     """
     # Phase 1: Expand all arguments into a flat list of file paths
     expanded_files = expand_args(srcs)
@@ -354,10 +390,25 @@ def get_files_from_args(srcs):
     # Phase 2: Validate all file paths
     verified_sources = []
     for file_path in expanded_files:
-        try:
-            verified_sources.append(verify_path(file_path))
-        except (FileNotFoundError, PermissionError, IsADirectoryError):
-            pass  # Skip invalid files
+        # Validate the file path and get line parts if present
+        result = verify_path(file_path)
+        # Handle the case where verify_path returns a tuple
+        if isinstance(result, tuple):
+            file_path, line_parts = result
+        else:
+            # If verify_path returns just the path (for backward compatibility)
+            file_path = result
+            # Extract line parts if present
+            line_parts = None
+            if ":L" in file_path:
+                orig_path = file_path
+                file_path = orig_path.split(":L")[0]
+                line_ref = "L" + orig_path.split(":L")[1]
+                try:
+                    line_parts = parse_line_reference(line_ref)
+                except ValueError as e:
+                    raise ValueError(f"Invalid line reference in {orig_path}: {str(e)}")
+        verified_sources.append((file_path, line_parts))
     # Sort the verified sources with custom sorting
-    verified_sources = sorted(verified_sources, key=file_sort_key)
+    verified_sources = sorted(verified_sources, key=lambda x: file_sort_key(x[0]))
     return verified_sources

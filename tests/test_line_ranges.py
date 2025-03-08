@@ -24,16 +24,25 @@ def test_parse_line_reference_multiple():
 def test_parse_line_reference_invalid():
     # Test parsing invalid references
     with pytest.raises(ValueError):
-        parse_line_reference("L")
+        parse_line_reference("L")  # Empty line number
 
     with pytest.raises(ValueError):
-        parse_line_reference("L-5")
+        parse_line_reference("L-5")  # Missing start number
 
     with pytest.raises(ValueError):
-        parse_line_reference("L5-")
+        parse_line_reference("L5-")  # Missing end number
 
     with pytest.raises(ValueError):
         parse_line_reference("L5-3")  # End less than start
+
+    with pytest.raises(ValueError):
+        parse_line_reference("L5bad")  # Invalid characters after number
+
+    with pytest.raises(ValueError):
+        parse_line_reference("L5-10bad")  # Invalid characters after range
+
+    with pytest.raises(ValueError):
+        parse_line_reference("L5,L10bad")  # Invalid characters in second part
 
 
 def test_get_file_content_entire_file(tmpdir):
@@ -94,16 +103,19 @@ def test_verify_path_with_line_reference_valid(tmpdir):
     file_path = str(test_file)
 
     # Valid single line
-    result = verify_path(f"{file_path}:L3")
+    result, line_parts = verify_path(f"{file_path}:L3")
     assert result == file_path
+    assert line_parts == [(3, 3)]
 
     # Valid range
-    result = verify_path(f"{file_path}:L2-4")
+    result, line_parts = verify_path(f"{file_path}:L2-4")
     assert result == file_path
+    assert line_parts == [(2, 4)]
 
     # Valid multiple
-    result = verify_path(f"{file_path}:L1,L3-4,L5")
+    result, line_parts = verify_path(f"{file_path}:L1,L3-4,L5")
     assert result == file_path
+    assert line_parts == [(1, 1), (3, 4), (5, 5)]
 
 
 def test_verify_path_with_line_reference_invalid(tmpdir):
@@ -126,3 +138,18 @@ def test_verify_path_with_line_reference_invalid(tmpdir):
     with pytest.raises(ValueError) as excinfo:
         verify_path(f"{file_path}:L1,L10")
     assert "Line reference out of range" in str(excinfo.value)
+
+    # Invalid characters after line number
+    with pytest.raises(ValueError) as excinfo:
+        verify_path(f"{file_path}:L3bad")
+    assert "Invalid character in line reference" in str(excinfo.value)
+
+    # Invalid characters after range
+    with pytest.raises(ValueError) as excinfo:
+        verify_path(f"{file_path}:L1-2bad")
+    assert "Invalid character in line reference" in str(excinfo.value)
+
+    # Non-existent file with line reference
+    with pytest.raises(FileNotFoundError) as excinfo:
+        verify_path("nonexistent_file.txt:L5")
+    assert "Path does not exist" in str(excinfo.value)
