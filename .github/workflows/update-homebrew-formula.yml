@@ -71,6 +71,9 @@ jobs:
           echo "Generating formula for package: $PACKAGE_NAME"
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
 
+          # Install jinja2 for the pypi-to-brew script
+          pip install jinja2
+
           # Make scripts executable
           chmod +x bin/pypi-to-brew
           chmod +x bin/update-brew-formula.sh
