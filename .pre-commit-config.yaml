@@ -39,6 +39,17 @@ default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
 repos:
   #############################################################################
+  ### Add changed files to git to include manual fixes from last run
+  #############################################################################
+  - repo: local
+    hooks:
+      - id: git-add-all-fixes
+        name: Stage all fixes made by previous hooks
+        entry: bash -c 'git add -u'
+        language: system
+        pass_filenames: false
+        always_run: true
+  #############################################################################
   ### Fixing Hooks Stage: issues will be fixed automatically
   #############################################################################
   # Initial stage for all fixing hooks
@@ -89,7 +100,12 @@ repos:
       - id: markdownlint
         args: ["--config", ".markdownlint.json", "--fix"]
         stages: [pre-commit]
-
+  - repo: https://github.com/psf/black
+    rev: 24.2.0
+    hooks:
+      - id: black
+        files: '\.py$'
+        stages: [pre-commit]
   # Python formatting
   - repo: https://github.com/pycqa/autoflake
     rev: v2.2.1
@@ -111,12 +127,6 @@ repos:
         files: '\.py$'
         stages: [pre-commit]
 
-  - repo: https://github.com/psf/black
-    rev: 24.2.0
-    hooks:
-      - id: black
-        files: '\.py$'
-        stages: [pre-commit]
   - repo: local
     hooks:
       - id: poetry check
@@ -138,7 +148,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [commit]
+        stages: [pre-commit]
         # Run this hook after the poetry check hook and before the git-add-all-fixes hook
 
   - repo: local
@@ -168,12 +178,12 @@ repos:
       - id: yamllint
         args: ["--format", "parsable", "-c", ".yamllint.yaml"]
 
-  # Python linting
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        files: '\.py$'
+  # # Python linting
+  # - repo: https://github.com/pycqa/flake8
+  #   rev: 7.0.0
+  #   hooks:
+  #     - id: flake8
+  #       files: '\.py$'
 
   # ShellCheck hook (local)
   - repo: local

@@ -1,0 +1,113 @@
+name: Update Homebrew Formula
+
+on:
+  # Respond to custom repository-dispatch event from PyPI publish workflow
+  repository_dispatch:
+    types: [pypi-published]
+  # Trigger after a GitHub Release is published
+  release:
+    types: [published]
+  # Keep the workflow_run trigger as a backup
+  workflow_run:
+    workflows: ["Publish to PyPI"]
+    types:
+      - completed
+    branches:
+      - "**" # This will match all branches
+  # Add manual trigger option for testing
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: "Force update even if no changes detected"
+        required: false
+        type: boolean
+        default: false
+      package_name:
+        description: "Package name (default: nanodoc)"
+        required: false
+        type: string
+        default: "nanodoc"
+
+permissions:
+  contents: write
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    # Only run if triggered by workflow_run and that workflow was successful
+    if:
+      ${{ github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # Fetch all history and branches for proper versioning
+          fetch-depth: 0
+          # Use the branch from the repository-dispatch event if available, otherwise use the current ref
+          ref: ${{ github.event.client_payload.branch || github.ref }}
+          # Use PAT for better permissions
+          token: ${{ secrets.PAT }}
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: "3.11"
+          cache-key-prefix: "brew-formula-env"
+
+      - name: Get package version
+        id: get_version
+        shell: bash
+        run: |
+          version=$(poetry version -s)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Generate Homebrew formula
+        shell: bash
+        run: |
+          # Get package name from input or default to nanodoc
+          PACKAGE_NAME="${{ github.event.inputs.package_name || 'nanodoc' }}"
+          echo "Generating formula for package: $PACKAGE_NAME"
+
+          # Make scripts executable
+          chmod +x bin/pypi-to-brew
+          chmod +x bin/update-brew-formula.sh
+
+          # Run the update script
+          bin/update-brew-formula.sh "$PACKAGE_NAME"
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Get current branch name
+          BRANCH_NAME=$(git symbolic-ref --short HEAD)
+          echo "Current branch: $BRANCH_NAME"
+
+          # If we're on a detached HEAD (which can happen with repository_dispatch),
+          # use the branch name from the event payload or default to main
+          if [ "$BRANCH_NAME" = "HEAD" ]; then
+            if [ -n "${{ github.event.client_payload.branch }}" ]; then
+              BRANCH_NAME="${{ github.event.client_payload.branch }}"
+            else
+              BRANCH_NAME="main"
+            fi
+            echo "Using branch from payload or default: $BRANCH_NAME"
+            git checkout -B $BRANCH_NAME
+          fi
+
+          # Check if there are changes to commit
+          if git diff --quiet Formula/$PACKAGE_NAME.rb; then
+            if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
+              echo "No changes detected, but force_update is true. Proceeding with commit."
+            else
+              echo "No changes to the formula, skipping commit"
+              exit 0
+            fi
+          fi
+
+          git add Formula/$PACKAGE_NAME.rb
+          git commit -m "Update Homebrew formula for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
+          git push origin $BRANCH_NAME

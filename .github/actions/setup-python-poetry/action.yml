@@ -35,7 +35,9 @@ runs:
       uses: actions/cache@v3
       with:
         path: ./.venv
-        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-venv-${{ inputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        key:
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-venv-${{
+          inputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
         restore-keys: |
           ${{ inputs.cache-key-prefix }}-${{ runner.os }}-venv-${{ inputs.python-version }}-
 

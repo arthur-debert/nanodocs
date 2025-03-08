@@ -1,8 +1,9 @@
 import pytest
-import os
-from nanodoc.nanodoc import create_header, LINE_WIDTH, process_file, process_all, expand_directory, expand_bundles, expand_args, verify_path, get_files_from_args, setup_logging
-import sys
-from io import StringIO
+
+from nanodoc.core import process_all
+from nanodoc.files import get_files_from_args
+from nanodoc.formatting import create_header
+
 
 def test_init_no_files_errors(tmpdir):
     # Create a temporary directory
@@ -11,7 +12,7 @@ def test_init_no_files_errors(tmpdir):
     # Call init with the empty directory
     # Get verified sources
     verified_sources = get_files_from_args([str(empty_dir)])
-    
+
     # Check if we have any valid files
     if not verified_sources:
         result = "Error: No valid source files found."
@@ -19,6 +20,7 @@ def test_init_no_files_errors(tmpdir):
     # Assert that an error message is returned without checking the exact text
     assert result.startswith("Error:")
     assert "files found" in result
+
 
 def test_init_one_file_no_line_numbers(tmpdir):
     # Create a test file
@@ -36,6 +38,7 @@ def test_init_one_file_no_line_numbers(tmpdir):
     assert "1:" not in result
     assert "2:" not in result
 
+
 def test_init_one_file_file_line_numbers(tmpdir):
     # Create a test file
     test_file = tmpdir.join("test_file.txt")
@@ -50,6 +53,7 @@ def test_init_one_file_file_line_numbers(tmpdir):
     assert "1: Line 1" in result
     assert "2: Line 2" in result
 
+
 def test_init_one_file_all_line_numbers(tmpdir):
     # Create a test file
     test_file = tmpdir.join("test_file.txt")
@@ -63,6 +67,7 @@ def test_init_one_file_all_line_numbers(tmpdir):
     # Assert that the file content is printed with all line numbers
     assert "1: Line 1" in result
     assert "2: Line 2" in result
+
 
 def test_init_toc(tmpdir):
     # Create a test file
@@ -80,6 +85,7 @@ def test_init_toc(tmpdir):
     assert "Line 1" in result
     assert "Line 2" in result
 
+
 @pytest.mark.skip(reason="Not implemented")
 def test_init_bundle_error(tmpdir):
     # Create a test bundle file with non-existent paths
@@ -89,11 +95,11 @@ def test_init_bundle_error(tmpdir):
     # Call init with the bundle file
     # Get verified sources
     verified_sources = get_files_from_args([str(bundle_file)])
-    
+
     # Check if we have any valid files
     if not verified_sources:
         result = "Error: No valid source files found."
-    
+
     # Assert that an error message is returned
     assert "Error:" in result
     assert "files found" in result

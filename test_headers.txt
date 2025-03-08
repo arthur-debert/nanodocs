@@ -1,9 +1,0 @@
-This is a test file to demonstrate the new header options.
-
-It has multiple lines of text to show how the headers work.
-
-The headers can now be:
-1. Hidden with --no-header
-2. Sequenced with --header-seq=numerical (1., 2., etc.)
-3. Sequenced with --header-seq=letter (a., b., etc.)
-4. Sequenced with --header-seq=roman (i., ii., etc.)

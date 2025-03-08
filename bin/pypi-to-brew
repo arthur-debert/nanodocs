@@ -1,0 +1,249 @@
+#!/usr/bin/env python3
+"""
+PyPI to Homebrew Formula Generator
+
+This script generates a Homebrew formula for a PyPI package. It creates a temporary
+directory, sets up a virtual environment, installs the package, and then uses the
+package metadata to generate a Homebrew formula.
+
+Usage:
+    bin/pypi-to-brew <package_name>
+
+Example:
+    bin/pypi-to-brew nanodoc
+"""
+
+import argparse
+import hashlib
+import os
+import shutil
+import re
+import subprocess
+import sys
+import tempfile
+import urllib.request
+from pathlib import Path
+from typing import Dict, Optional
+
+import jinja2
+
+# Jinja2 template for the Homebrew formula
+FORMULA_TEMPLATE = """class {{ class_name }} < Formula
+  desc "{{ description }}"
+  homepage "{{ homepage }}"
+  url "{{ url }}"
+  sha256 "{{ sha256 }}"
+  license "{{ license }}"
+
+  depends_on "python@3"
+  depends_on "poetry"
+
+  def install
+    system "poetry", "install"
+
+    # Create wrapper script for pmrun
+    (bin/"{{ executable }}").write <<~EOS
+      #!/bin/bash
+      cd #{prefix} && poetry run {{ executable }} "$@"
+    EOS
+    chmod 0755, bin/"{{ executable }}"
+  end
+
+  test do
+    system "#{bin}/{{ executable }}", "--help"
+  end
+end
+"""
+
+
+def create_temp_dir() -> str:
+    """Create a temporary directory and return its path."""
+    return tempfile.mkdtemp()
+
+
+def create_venv(temp_dir: str) -> str:
+    """Create a virtual environment in the temporary directory."""
+    venv_path = os.path.join(temp_dir, ".venv")
+    subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
+    return venv_path
+
+
+def install_package(venv_path: str, package_name: str) -> None:
+    """Install the package in the virtual environment."""
+    pip_path = os.path.join(venv_path, "bin", "pip")
+    subprocess.run([pip_path, "install", package_name], check=True)
+
+
+def get_package_metadata(venv_path: str, package_name: str) -> Dict[str, str]:
+    """Get the package metadata using the about-py-package script."""
+    python_path = os.path.join(venv_path, "bin", "python")
+    script_dir = Path(__file__).parent
+    about_py_package = str(script_dir / "about-py-package")
+
+    metadata = {}
+
+    # Get name
+    result = subprocess.run(
+        [python_path, about_py_package, "--name", package_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    metadata["name"] = result.stdout.strip()
+
+    # Get version
+    result = subprocess.run(
+        [python_path, about_py_package, "--version", package_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    metadata["version"] = result.stdout.strip()
+
+    # Get summary
+    result = subprocess.run(
+        [python_path, about_py_package, "--summary", package_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    metadata["summary"] = result.stdout.strip()
+
+    # Get author
+    result = subprocess.run(
+        [python_path, about_py_package, "--author", package_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    metadata["author"] = result.stdout.strip()
+
+    # Get home page
+    result = subprocess.run(
+        [python_path, about_py_package, "--home-page", package_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    metadata["home_page"] = result.stdout.strip()
+
+    # Get license
+    result = subprocess.run(
+        [python_path, about_py_package, "--license", package_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    metadata["license"] = result.stdout.strip() or "Unknown"
+
+    return metadata
+
+
+def get_license_from_file(license_file_path: str = "bin/LICENSE") -> str:
+    """Get the license type from the LICENSE file."""
+    try:
+        with open(license_file_path, "r") as f:
+            content = f.read()
+            # Extract license type from the first few lines
+            match = re.search(r"(MIT|Apache|GPL|BSD|MPL|LGPL|EPL|CDDL|CPL)\s+License", content, re.IGNORECASE)
+            if match:
+                return match.group(1)
+    except Exception:
+        pass
+    return "MIT"  # Default to MIT if not found or error
+
+
+def get_package_url(package_name: str, version: str) -> str:
+    """Get the URL for the package source."""
+    return f"https://files.pythonhosted.org/packages/source/{package_name[0]}/{package_name}/{package_name}-{version}.tar.gz"
+
+
+def calculate_sha256(url: str) -> str:
+    """Download the package and calculate its SHA256 checksum."""
+    try:
+        with urllib.request.urlopen(url) as response:
+            data = response.read()
+            return hashlib.sha256(data).hexdigest()
+    except Exception as e:
+        print(f"Error downloading {url}: {e}", file=sys.stderr)
+        return "REPLACE_WITH_ACTUAL_SHA256"
+
+
+def get_executable_name(venv_path: str, package_name: str) -> str:
+    """Get the name of the executable installed by the package."""
+    # For Poetry packages, we'll use 'pmrun' as the default executable
+    return "pmrun"
+
+
+def generate_formula(metadata: Dict[str, str], sha256: str, executable: str) -> str:
+    """Generate the Homebrew formula using the Jinja2 template."""
+    template = jinja2.Template(FORMULA_TEMPLATE)
+
+    # Try to get license from LICENSE file first
+    script_dir = Path(__file__).parent
+    license_file = script_dir / "LICENSE"
+    if license_file.exists():
+        license_text = get_license_from_file(str(license_file))
+    else:
+        # Fall back to metadata license if file doesn't exist
+        license_text = metadata["license"]
+        if license_text.startswith("usage:") or license_text == "Unknown":
+            license_text = "MIT"  # Default to MIT if license is not available
+
+    # Capitalize the first letter of each word in the class name
+    class_name = "".join(word.capitalize() for word in metadata["name"].split("-"))
+
+    return template.render(
+        class_name=class_name,
+        description=metadata["summary"],
+        homepage=metadata["home_page"],
+        url=get_package_url(metadata["name"], metadata["version"]),
+        sha256=sha256,
+        license=license_text,
+        executable=executable,
+    )
+
+
+def main():
+    """Main function."""
+    parser = argparse.ArgumentParser(description="Generate a Homebrew formula for a PyPI package")
+    parser.add_argument("package_name", help="The name of the PyPI package")
+    args = parser.parse_args()
+
+    package_name = args.package_name
+
+    # Create a temporary directory
+    temp_dir = create_temp_dir()
+
+    try:
+        # Create a virtual environment
+        venv_path = create_venv(temp_dir)
+
+        # Install the package
+        install_package(venv_path, package_name)
+
+        # Get the package metadata
+        metadata = get_package_metadata(venv_path, package_name)
+
+        # Get the package URL
+        url = get_package_url(metadata["name"], metadata["version"])
+
+        # Calculate the SHA256 checksum
+        sha256 = calculate_sha256(url)
+
+        # Get the executable name
+        executable = get_executable_name(venv_path, package_name)
+
+        # Generate the formula
+        formula = generate_formula(metadata, sha256, executable)
+
+        # Output the formula
+        print(formula)
+
+    finally:
+        # Clean up the temporary directory
+        shutil.rmtree(temp_dir)
+
+
+if __name__ == "__main__":
+    main()
