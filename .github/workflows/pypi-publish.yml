@@ -1,16 +1,8 @@
 name: Publish to PyPI
 
 on:
+  # Simple workflow dispatch without version inputs
   workflow_dispatch:
-    inputs:
-      from_pyproject:
-        description: "Use version from pyproject.toml"
-        required: true
-        type: boolean
-        default: true
-      release_version:
-        description: "Or tag name for the release"
-        required: false
 
 permissions:
   contents: write
@@ -32,35 +24,24 @@ jobs:
         id: determine_version
         shell: bash
         run: |
-          if [ "${{ github.event.inputs.from_pyproject }}" = true ]; then
-            release_version=$(poetry version -s)
-            echo "Using version from pyproject.toml: $release_version"
-          else
-            if [ -z "${{ github.event.inputs.release_version }}" ]; then
-              echo "Error: No release version provided and not using pyproject.toml version."
-              exit 1
-            fi
-            release_version=${{ github.event.inputs.release_version }}
-            echo "Using provided release version: $release_version"
-          fi
+          release_version=$(poetry version -s)
+          echo "Using version from pyproject.toml: $release_version"
           echo "release_version=$release_version" >> $GITHUB_OUTPUT
 
-      - name: Update version
-        shell: bash
-        run: |
-          poetry version ${{ steps.determine_version.outputs.release_version }}
-
+      # Build step remains the same
       - name: Build
         shell: bash
         run: |
           poetry build
 
+      # Publish step remains the same
       - name: Publish
         shell: bash
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
+          echo "Publishing version ${{ steps.determine_version.outputs.release_version }} to PyPI..."
           poetry run twine upload --repository pypi dist/*
 
       - name: Create GitHub Release
