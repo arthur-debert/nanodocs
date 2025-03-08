@@ -1,0 +1,148 @@
+name: Update APT Package
+
+on:
+  # Respond to custom repository-dispatch event from PyPI publish workflow
+  repository_dispatch:
+    types: [pypi-published]
+  # Trigger after a GitHub Release is published
+  release:
+    types: [published]
+  # Keep the workflow_run trigger as a backup
+  workflow_run:
+    workflows: ["Publish to PyPI"]
+    types:
+      - completed
+    branches:
+      - "**" # This will match all branches
+  # Add manual trigger option for testing
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: "Force update even if no changes detected"
+        required: false
+        type: boolean
+        default: false
+      package_name:
+        description: "Package name (default: nanodoc)"
+        required: false
+        type: string
+        default: "nanodoc"
+
+permissions:
+  contents: write
+
+jobs:
+  update-apt-package:
+    runs-on: ubuntu-latest
+    # Only run if triggered by workflow_run and that workflow was successful
+    if:
+      ${{ github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # Fetch all history and branches for proper versioning
+          fetch-depth: 0
+          # Use the branch from the repository-dispatch event if available, otherwise use the current ref
+          ref: ${{ github.event.client_payload.branch || github.ref }}
+          # Use PAT for better permissions
+          token: ${{ secrets.PAT }}
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: "3.11"
+          cache-key-prefix: "apt-package-env"
+
+      - name: Get package version
+        id: get_version
+        shell: bash
+        run: |
+          version=$(poetry version -s)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          # Install required packages for building Debian packages
+          sudo apt-get update
+          sudo apt-get install -y python3-all python3-setuptools dh-python debhelper devscripts build-essential fakeroot lintian
+
+          # Install jinja2 for the pypi-to-apt script
+          pip install jinja2
+
+      - name: Generate APT package
+        id: generate_package
+        shell: bash
+        run: |
+          # Get package name from input or default to nanodoc
+          PACKAGE_NAME="${{ github.event.inputs.package_name || 'nanodoc' }}"
+          echo "Generating APT package for package: $PACKAGE_NAME"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+          # Make scripts executable
+          chmod +x bin/pypi-to-apt
+          chmod +x bin/about-py-package
+          chmod +x bin/update-apt-package.sh
+
+          # Run the update script
+          bin/update-apt-package.sh "$PACKAGE_NAME"
+
+      - name: Test APT package
+        shell: bash
+        run: |
+          # Get package name from previous step
+          PACKAGE_NAME="${{ steps.generate_package.outputs.package_name }}"
+          echo "Testing APT package for: $PACKAGE_NAME"
+
+          # Install the package
+          sudo apt install -y ./Debian/python3-$PACKAGE_NAME*.deb
+
+          # Test the package by running it with --help
+          python3 -m $PACKAGE_NAME --help
+
+          # Additional tests could be added here
+          # For example, running specific tests for the package
+
+          echo "Package test completed successfully"
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          # Get package name from previous step
+          PACKAGE_NAME="${{ steps.generate_package.outputs.package_name }}"
+          echo "Using package name: $PACKAGE_NAME"
+
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Get current branch name
+          BRANCH_NAME=$(git symbolic-ref --short HEAD)
+          echo "Current branch: $BRANCH_NAME"
+
+          # If we're on a detached HEAD (which can happen with repository_dispatch),
+          # use the branch name from the event payload or default to main
+          if [ "$BRANCH_NAME" = "HEAD" ]; then
+            if [ -n "${{ github.event.client_payload.branch }}" ]; then
+              BRANCH_NAME="${{ github.event.client_payload.branch }}"
+            else
+              BRANCH_NAME="main"
+            fi
+            echo "Using branch from payload or default: $BRANCH_NAME"
+            git checkout -B $BRANCH_NAME
+          fi
+
+          # Check if there are changes to commit
+          if git diff --quiet Debian/; then
+            if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
+              echo "No changes detected, but force_update is true. Proceeding with commit."
+            else
+              echo "No changes to the APT package, skipping commit"
+              exit 0
+            fi
+          fi
+
+          git add Debian/
+          git commit -m "Update APT package for $PACKAGE_NAME to version ${{ steps.get_version.outputs.version }}"
+          git push origin $BRANCH_NAME
