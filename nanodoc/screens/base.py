@@ -209,7 +209,7 @@ class Screen(ABC):
         """Render the screen."""
 
     @abstractmethod
-    def handle_input(self) -> Tuple[str, Optional[Dict[str, Any]]]:
+    def handle_input(self, key: int) -> Tuple[str, Optional[Dict[str, Any]]]:
         """Handle user input.
 
         Returns:
@@ -217,16 +217,3 @@ class Screen(ABC):
             - next_screen is the name of the next screen to show
             - screen_params is an optional dictionary of parameters to pass to the next screen
         """
-
-    def run(self) -> Tuple[str, Optional[Dict[str, Any]]]:
-        """Run the screen.
-
-        Returns:
-            Tuple of (next_screen, screen_params) where:
-            - next_screen is the name of the next screen to show
-            - screen_params is an optional dictionary of parameters to pass to the next screen
-        """
-        self.stdscr.clear()
-        self.render()
-        self.stdscr.refresh()
-        return self.handle_input()

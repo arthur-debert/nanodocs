@@ -37,10 +37,15 @@ class FileSelector(Screen):
             6, 0, "Press 'q' to quit or 'n' to go to Bundle Summary screen."
         )
 
-    def handle_input(self) -> Tuple[str, Optional[Dict[str, Any]]]:
-        """Handle user input."""
-        key = self.stdscr.getch()
-
+    def handle_input(self, key: int) -> Tuple[str, Optional[Dict[str, Any]]]:
+        """Handle user input.
+        
+        Args:
+            key: The key that was pressed
+            
+        Returns:
+            Tuple of (next_screen, screen_params)
+        """
         # Check for global keys
         if self.check_global_keys(key):
             return "file_selector", None
