@@ -59,7 +59,8 @@ class FileDetail(Screen):
         self.render_title("NANODOC BUNDLE MAKER / FILE DETAIL")
         
         # Render file info
-        self.safe_addstr(2, 0, f"Current File: {self.current_file}")
+        self.safe_addstr(2, 0, f"Current File:", curses.A_BOLD)
+        self.safe_addstr(3, 2, self.current_file, curses.color_pair(4))
         
         # Render file content with line numbers
         content_start_y = 4
@@ -89,27 +90,48 @@ class FileDetail(Screen):
                     
                     # Display line with appropriate highlighting
                     if is_selected:
-                        self.safe_addstr(content_start_y + i, 0, f"{line_num} | ", curses.A_BOLD)
-                        self.safe_addstr(content_start_y + i, 5, self.file_content[line_idx].rstrip(), curses.A_BOLD)
+                        self.safe_addstr(content_start_y + i, 0, f"{line_num} | ", curses.A_BOLD | curses.color_pair(2))
+                        self.safe_addstr(content_start_y + i, 5, self.file_content[line_idx].rstrip(), curses.A_BOLD | curses.color_pair(2))
                     else:
-                        self.safe_addstr(content_start_y + i, 0, f"{line_num} | ")
+                        self.safe_addstr(content_start_y + i, 0, f"{line_num} | ", curses.color_pair(4))
                         self.safe_addstr(content_start_y + i, 5, self.file_content[line_idx].rstrip())
         
         # Render current ranges
         ranges_y = content_start_y + visible_lines + 1
-        self.safe_addstr(ranges_y, 0, "Selected Ranges:")
+        self.safe_addstr(ranges_y, 0, "Selected Ranges:", curses.A_BOLD)
         
         if not self.current_ranges:
-            self.safe_addstr(ranges_y + 1, 2, "No ranges selected. Press SPACE to select entire file.")
+            self.safe_addstr(ranges_y + 1, 2, "No ranges selected. Press SPACE to select entire file.", curses.color_pair(3))
         else:
             for i, r in enumerate(self.current_ranges):
-                start = r.get("start", 1)
-                end = r.get("end")
-                self.safe_addstr(ranges_y + 1 + i, 2, f"{i+1}. {format_range_display(r)}")
+                self.safe_addstr(ranges_y + 1 + i, 2, f"{i+1}. {format_range_display(r)}", curses.color_pair(2))
+        
+        # Render input mode if active
+        if self.input_mode:
+            input_y = ranges_y + (len(self.current_ranges) if self.current_ranges else 1) + 2
+            if self.input_mode == 'start':
+                self.safe_addstr(input_y, 0, "Enter start line:", curses.A_BOLD)
+                self.safe_addstr(input_y, 17, self.current_input, curses.A_BOLD | curses.color_pair(4))
+                self.safe_addstr(input_y + 1, 0, "Press TAB when done to enter end line")
+            elif self.input_mode == 'end':
+                self.safe_addstr(input_y, 0, f"Start line: {self.start_line}", curses.A_BOLD)
+                self.safe_addstr(input_y + 1, 0, "Enter end line:", curses.A_BOLD)
+                self.safe_addstr(input_y + 1, 15, self.current_input, curses.A_BOLD | curses.color_pair(4))
+                self.safe_addstr(input_y + 2, 0, "Press ENTER when done to add range")
         
         # Render controls
-        self.safe_addstr(self.height - 3, 0, "Controls: SPACE: Select entire file, 0-9: Start line selection")
-        self.safe_addstr(self.height - 2, 0, "↑/↓: Scroll, b: Back to Bundle Summary, q: Quit")
+        self.safe_addstr(self.height - 4, 0, "Controls (↑/↓ or k/j to scroll):", curses.A_BOLD)
+        self.safe_addstr(self.height - 3, 2, "SPACE: Select entire file  |  0-9: Start line selection  |  TAB/ENTER: Confirm")
+        self.safe_addstr(self.height - 2, 2, "↑/↓: Scroll  |  b: Back to Bundle Summary  |  q: Quit")
+        
+        # Show scroll indicator if needed
+        if self.line_count > visible_lines:
+            scroll_pct = min(100, int(100 * (self.scroll_position + visible_lines) / self.line_count))
+            self.safe_addstr(self.height - 1, self.width - 15, f"Scroll: {scroll_pct}%", curses.color_pair(4))
+            
+            # Show more indicator if there are more lines below
+            if self.scroll_position + visible_lines < self.line_count:
+                self.safe_addstr(content_start_y + visible_lines - 1, self.width - 10, "↓ more ↓", curses.A_BOLD | curses.color_pair(4))
     
     def handle_input(self, key: int) -> Tuple[str, Optional[Dict[str, Any]]]:
         """Handle user input.
@@ -138,13 +160,13 @@ class FileDetail(Screen):
             self.current_ranges = [{"start": 1, "end": None}]
             return "file_detail", None
             
-        elif key == curses.KEY_UP:
+        elif key == curses.KEY_UP or key == ord('k'):  # Up arrow or vim 'k'
             # Scroll up
             if self.scroll_position > 0:
                 self.scroll_position -= 1
             return "file_detail", None
             
-        elif key == curses.KEY_DOWN:
+        elif key == curses.KEY_DOWN or key == ord('j'):  # Down arrow or vim 'j'
             # Scroll down
             if self.scroll_position < max(0, self.line_count - (self.height - 10)):
                 self.scroll_position += 1

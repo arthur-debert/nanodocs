@@ -8,6 +8,7 @@ and executes them in the app.
 import json
 import os
 import threading
+import tempfile
 import time
 from typing import Any, Callable, Dict, List, Optional
 
@@ -26,6 +27,7 @@ class CommandHandler:
         self.command_file = command_file
         self.log_file = log_file
         self.app_state = app_state
+        self.response_file = os.path.join(tempfile.gettempdir(), "nanodoc_response.json")
         self.running = False
         self.command_handlers = {}
         self.last_modified = 0
@@ -56,6 +58,7 @@ class CommandHandler:
         self.register_command('get_state', self._handle_get_state)
         self.register_command('set_state', self._handle_set_state)
         self.register_command('navigate', self._handle_navigate)
+        self.register_command('get_focus', self._handle_get_focus)
         self.register_command('send_key', self._handle_send_key)
     
     def register_command(self, command: str, handler: Callable):
@@ -106,6 +109,19 @@ class CommandHandler:
                 self.app_state['next_screen_params'] = params['params']
             return {'result': 'success', 'screen': params['screen']}
         return {'result': 'error', 'message': 'No screen specified'}
+        
+    def _handle_get_focus(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle the get_focus command.
+        
+        Args:
+            params: The command parameters
+            
+        Returns:
+            The current focus information
+        """
+        focus_info = self.app_state.get('focus', {})
+        self._send_response({'focus': focus_info})
+        return {'focus': focus_info}
     
     def _handle_send_key(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle the send_key command.
@@ -123,7 +139,10 @@ class CommandHandler:
                 return {'result': 'success', 'key': key}
             elif isinstance(key, int):
                 self.app_state['next_key'] = key
-                return {'result': 'success', 'key': key}
+                result = {'result': 'success', 'key': key}
+                # Send response with key info
+                self._send_response(result)
+                return result
         return {'result': 'error', 'message': 'Invalid key'}
     
     def log(self, message: str, data: Optional[Dict[str, Any]] = None):
@@ -153,6 +172,19 @@ class CommandHandler:
                 json.dump(logs, f, indent=2)
         except Exception as e:
             print(f"Error logging to file: {e}")
+            
+    def _send_response(self, data: Dict[str, Any]):
+        """Send a response to the response file.
+        
+        Args:
+            data: The response data
+        """
+        try:
+            with open(self.response_file, 'w') as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            print(f"Error sending response: {e}")
+            
     
     def check_for_commands(self):
         """Check for new commands in the command file."""
@@ -166,8 +198,15 @@ class CommandHandler:
             self.last_modified = current_modified
             
             # Read commands from file
-            with open(self.command_file, 'r') as f:
-                commands = json.load(f)
+            try:
+                with open(self.command_file, 'r') as f:
+                    content = f.read().strip()
+                    if not content:  # Handle empty file
+                        commands = []
+                    else:
+                        commands = json.loads(content)
+            except json.JSONDecodeError:
+                commands = []  # Reset commands if file is corrupted
             
             # Process commands
             for command in commands:
