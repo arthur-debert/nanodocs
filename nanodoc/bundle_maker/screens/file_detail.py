@@ -8,6 +8,7 @@ import os
 import curses
 from typing import Any, Dict, Optional, Tuple, List
 
+from ..operations import load_file_content, format_range_display
 from .base import Screen
 
 
@@ -36,15 +37,13 @@ class FileDetail(Screen):
     
     def _load_file_content(self) -> None:
         """Load the content of the current file."""
-        if os.path.isfile(self.current_file):
-            try:
-                with open(self.current_file, 'r') as f:
-                    self.file_content = f.readlines()
-                self.line_count = len(self.file_content)
-            except Exception as e:
-                self.show_error(f"Error loading file: {str(e)}")
-                self.file_content = []
-                self.line_count = 0
+        try:
+            # Use operations module to load file content
+            self.file_content, self.line_count = load_file_content(self.current_file)
+        except (FileNotFoundError, PermissionError) as e:
+            self.show_error(str(e))
+            self.file_content = []
+            self.line_count = 0
     
     def _load_current_ranges(self) -> None:
         """Load the current ranges for this file from app state."""
@@ -106,10 +105,7 @@ class FileDetail(Screen):
             for i, r in enumerate(self.current_ranges):
                 start = r.get("start", 1)
                 end = r.get("end")
-                if end is None:
-                    self.safe_addstr(ranges_y + 1 + i, 2, f"{i+1}. Entire file")
-                else:
-                    self.safe_addstr(ranges_y + 1 + i, 2, f"{i+1}. Lines {start}-{end}")
+                self.safe_addstr(ranges_y + 1 + i, 2, f"{i+1}. {format_range_display(r)}")
         
         # Render controls
         self.safe_addstr(self.height - 3, 0, "Controls: SPACE: Select entire file, 0-9: Start line selection")

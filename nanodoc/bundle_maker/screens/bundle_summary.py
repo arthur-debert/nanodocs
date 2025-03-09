@@ -8,6 +8,7 @@ import os
 import curses
 from typing import Any, Dict, Optional, Tuple
 
+from ..operations import format_range_display, save_bundle_to_file
 from .base import Screen
 
 
@@ -52,18 +53,8 @@ class BundleSummary(Screen):
                 
                 # Format ranges display
                 ranges_text = ""
-                if item['ranges']:
-                    range_strs = []
-                    for r in item['ranges']:
-                        if r['end'] is None:
-                            range_strs.append("entire file")
-                        else:
-                            if r['start'] == r['end']:
-                                range_strs.append(f"line {r['start']}")
-                            else:
-                                range_strs.append(f"lines {r['start']}-{r['end']}")
-                    ranges_text = ", ".join(range_strs)
-                else:
+                if not item['ranges']:
+                    # Default to entire file if no ranges specified
                     ranges_text = "entire file"
                 
                 # Highlight the current selection
@@ -71,6 +62,10 @@ class BundleSummary(Screen):
                 if i == self.cursor_position:
                     attr = curses.A_REVERSE
                 
+                # Format ranges for display
+                if item['ranges']:
+                    range_strs = [format_range_display(r) for r in item['ranges']]
+                    ranges_text = ", ".join(range_strs)
                 self.safe_addstr(5 + i, 2, f"{i+1}. {file_name} ({ranges_text})", attr)
         else:
             self.safe_addstr(4, 0, "No files in bundle. Press 'a' to add files.")
@@ -118,7 +113,15 @@ class BundleSummary(Screen):
             return "bundle_summary", None
         elif key == ord('s'):
             # Save bundle (just a placeholder for now)
-            self.show_message("Save Bundle", "Bundle saved successfully (placeholder).")
+            content_items = self.app_state.get("content_items", [])
+            if content_items:
+                try:
+                    bundle_path = save_bundle_to_file(content_items, self.bundle_name)
+                    self.show_message("Save Bundle", f"Bundle saved successfully to {bundle_path}")
+                except Exception as e:
+                    self.show_error(f"Error saving bundle: {str(e)}")
+            else:
+                self.show_error("No files in bundle to save")
             return "bundle_summary", None
         elif key == ord('q'):
             # Quit
