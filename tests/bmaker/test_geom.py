@@ -1,6 +1,6 @@
 import pytest
 
-from nanodoc.bundle_maker.ui.geom import Pos, Range, Rect, Size
+from nanodoc.makerapp.ui.geom import Pos, Range, Rect, Size
 
 
 # Range tests

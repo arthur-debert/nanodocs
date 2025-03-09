@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Import the bundle maker
 
-from nanodoc.bundle_maker.logging import get_logger
-from nanodoc.bundle_maker.main import main
+from nanodoc.makerapp.logging import get_logger
+from nanodoc.makerapp.main import main
 logger = get_logger("bmaker")
 
 # Log directory

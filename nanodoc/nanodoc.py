@@ -109,7 +109,7 @@ import sys
 # Handle both package and direct execution
 try:
     # Try relative imports first (when used as a package)
-    from .bundle_maker import main as bundle_maker_main
+    from .makerapp import main as bundle_maker_main
     from .core import process_all
     from .data import Bundle, save_bundle
     from .files import get_files_from_args
@@ -117,7 +117,7 @@ except ImportError:
     # Fall back to absolute imports (when run as a script)
     # Add parent directory to path to make nanodoc a package
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    from nanodoc.bundle_maker import main as bundle_maker_main
+    from nanodoc.makerapp import main as bundle_maker_main
     from nanodoc.core import process_all
     from nanodoc.data import Bundle, save_bundle
     from nanodoc.files import get_files_from_args

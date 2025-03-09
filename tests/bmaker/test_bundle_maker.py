@@ -8,7 +8,7 @@ from nanodoc.data import Bundle, ContentItem, LineRange
 
 def test_bundle_maker_imports():
     """Test that the bundle maker module can be imported."""
-    from nanodoc.bundle_maker import main
+    from nanodoc.makerapp import main
 
     assert callable(main)
 
