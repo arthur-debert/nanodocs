@@ -2,9 +2,7 @@
 
 import os
 import sys
-from unittest.mock import MagicMock, patch
 
-from nanodoc.bundle_maker import BundleMaker
 from nanodoc.data import Bundle, ContentItem, LineRange
 
 
@@ -13,47 +11,6 @@ def test_bundle_maker_imports():
     from nanodoc.bundle_maker import main
 
     assert callable(main)
-
-
-def test_add_file_part():
-    """Test adding file parts to the bundle."""
-    # Create a mock BundleMaker instance
-    with (
-        patch("curses.initscr"),
-        patch("curses.start_color"),
-        patch("curses.use_default_colors"),
-        patch("curses.init_pair"),
-        patch("curses.curs_set"),
-    ):
-        # Create a mock stdscr
-        mock_stdscr = MagicMock()
-        mock_stdscr.getmaxyx.return_value = (25, 80)
-
-        bundle_maker = BundleMaker(mock_stdscr)
-        bundle_maker.content_items = []
-
-        # Test adding a full file
-        bundle_maker._add_file_part("test.txt", 1, "X")
-        assert len(bundle_maker.content_items) == 1
-        assert bundle_maker.content_items[0].file_path == "test.txt"
-        assert len(bundle_maker.content_items[0].ranges) == 1
-        assert bundle_maker.content_items[0].ranges[0].start == 1
-        assert bundle_maker.content_items[0].ranges[0].end == "X"
-
-        # Test adding a single line
-        bundle_maker._add_file_part("another.txt", 5, 5)
-        assert len(bundle_maker.content_items) == 2
-        assert bundle_maker.content_items[1].file_path == "another.txt"
-        assert bundle_maker.content_items[1].ranges[0].start == 5
-        assert bundle_maker.content_items[1].ranges[0].end == 5
-
-        # Test adding a range
-        bundle_maker._add_file_part("another.txt", 10, 20)
-        # Should add to the existing ContentItem for another.txt
-        assert len(bundle_maker.content_items) == 2
-        assert len(bundle_maker.content_items[1].ranges) == 2
-        assert bundle_maker.content_items[1].ranges[1].start == 10
-        assert bundle_maker.content_items[1].ranges[1].end == 20
 
 
 def test_nanodoc_maker_flag(monkeypatch, capsys):

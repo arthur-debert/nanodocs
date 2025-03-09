@@ -14,14 +14,16 @@ import sys
 import tempfile
 from typing import Dict, Optional
 
-# Log directory
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tmp", "nanodoc-logs")
+# Log directory - ensure it's always an absolute path
+LOG_DIR = '/tmp/nanodoc/logs/'
+if not os.path.isabs(LOG_DIR):
+    LOG_DIR = os.path.abspath(LOG_DIR)
 
 # Create log directory if it doesn't exist
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Default log file path with timestamp
-DEFAULT_LOG_FILE = os.path.join(LOG_DIR, f"nanodoc_bundle_maker_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+DEFAULT_LOG_FILE = os.path.join(LOG_DIR, f"nanodoc_bundle_maker_{datetime.datetime.now().strftime('%Y%m%d')}.log")
 loggers: Dict[str, logging.Logger] = {}
 handlers: Dict[str, logging.Handler] = {}
 

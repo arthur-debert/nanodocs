@@ -33,7 +33,7 @@ of logs for different parts of the application.
 
 ## Log File Location
 
-All log files are stored in the `tmp/nanodoc-logs` directory by default. This directory is created automatically if it doesn't exist. Each log file is named with a timestamp to avoid overwriting previous logs.
+All log files are stored in the `/tmpmp/nanodoc-logs` directory by default. This directory is created automatically if it doesn't exist. Each log file is named with a timestamp to avoid overwriting previous logs.
 
 ## Command-Line Options
 
@@ -60,7 +60,7 @@ debug logging enabled:
 ./run_bundle_maker_debug.py
 ```
 
-This script creates a timestamped log file in the `tmp/nanodoc-logs` directory and sets the
+This script creates a timestamped log file in the `/tmpmp/nanodoc-logs` directory and sets the
 log level to DEBUG.
 
 ## Viewing Logs

@@ -16,23 +16,21 @@ import pathlib
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Import the bundle maker
+
+from nanodoc.bundle_maker.logging import get_logger
 from nanodoc.bundle_maker.main import main
+logger = get_logger("bmaker")
 
 # Log directory
-LOG_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "tmp", "nanodoc-logs")
-os.makedirs(LOG_DIR, exist_ok=True)
 
 if __name__ == "__main__":
     # Create a timestamped log file name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = os.path.join(LOG_DIR, f"bundle_maker_debug_{timestamp}.log")
     
     # Set up command line arguments
-    sys.argv.extend(["--debug", "--log-file", log_file])
     
     # Print information
     print(f"Running bundle maker with debug logging enabled")
-    print(f"Log file: {os.path.abspath(log_file)}")
     print("Press Ctrl+C or 'q' to quit")
     print()
     
