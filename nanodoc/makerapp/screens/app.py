@@ -33,6 +33,12 @@ class App:
             "selected_files": [],
             "current_file": None,
         }
+        
+        # Initialize focus tracking
+        self.app_state["focus"] = {
+            "screen": "file_selector",
+            "element": "file_list",
+        }
         self.event_queue = queue.Queue()
         
         self.screens = {}
@@ -49,6 +55,8 @@ class App:
         # Register event handler
         self.command_handler.register_command('send_event', 
                                              lambda params: self._handle_event(params))
+        # Register get_focus handler
+        self.command_handler.register_command('get_focus', lambda params: self._handle_get_focus(params))
         
         self.command_handler.start()
     
@@ -61,6 +69,17 @@ class App:
         """
         self.screens[name] = screen_class
         
+    def _handle_get_focus(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle a get_focus request from the command handler.
+        
+        Args:
+            params: The request parameters
+            
+        Returns:
+            The current focus information
+        """
+        return {'focus': self.app_state.get('focus', {})}
+        
     def _handle_event(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle an event from the command handler.
         
@@ -72,7 +91,13 @@ class App:
         """
         if 'event' in params:
             self.event_queue.put(params)
-            return {'result': 'success', 'event': params['event']}
+            result = {'result': 'success', 'event': params['event']}
+            
+            # Add focus information to the result
+            if params['event'] == 'key_press' and 'key' in params:
+                result['focus'] = self.app_state.get('focus', {})
+                
+            return result
     
     def navigate_to(self, screen_name: str, params: Optional[Dict[str, Any]] = None) -> None:
         """Navigate to a screen.
@@ -94,6 +119,11 @@ class App:
         # Log navigation
         self.command_handler.log(f"Navigating to screen: {screen_name}", params)
         
+        # Update focus when navigating to a new screen
+        self.app_state["focus"] = {
+            "screen": screen_name,
+        }
+        
         # Create and run the screen
         screen = self.screens[screen_name](self.stdscr, self.ui_defs, self.app_state)
         self.current_screen = screen_name
@@ -113,11 +143,21 @@ class App:
                 event = self.event_queue.get_nowait()
                 if event.get('event') == 'key_press' and 'key' in event:
                     key = event['key']
-                    if isinstance(key, str) and len(key) == 1:
-                        key = ord(key)
+                    # Handle different key types
+                    if isinstance(key, str):
+                        if len(key) == 1:
+                            key = ord(key)  # Convert single character to ASCII
+                    # Integer key codes (like curses.KEY_UP) are passed through as-is
                     # Process the key as if it came from the user
                     next_screen, next_params = screen.handle_input(key)
                 elif event.get('event') == 'navigate' and 'screen' in event:
+                    # Update focus when navigating to a new screen
+                    self.app_state["focus"] = {
+                        "screen": event['screen'],
+                    }
+                    # Log the focus change
+                    self.command_handler.log("Focus changed", {
+                        "focus": self.app_state["focus"]})
                     next_screen = event['screen']
                     next_params = event.get('params')
             except queue.Empty:

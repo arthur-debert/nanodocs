@@ -1,6 +1,8 @@
 import logging
 
 import pytest
+from fixtures import project_paths, project_file, sample_file
+
 
 
 @pytest.fixture

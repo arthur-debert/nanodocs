@@ -139,3 +139,4 @@ tmp
 # Debian package build artifacts
 debian-build/
 *.deb
+bundle_maker_*.log

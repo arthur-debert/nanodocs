@@ -1,4 +1,4 @@
-BUNDLE MAKER DEVELOPMENT GUIDE
+# BUNDLE MAKER DEVELOPMENT GUIDE
 
 APPLICATION ARCHITECTURE
 
@@ -26,6 +26,7 @@ The bundle maker application follows a modular architecture:
    - base.py: Provides common functionality for all screens
    - Screen classes: Handle rendering and user input for specific screens
    - command_handler.py: Watches for external commands and executes them
+   - operations.py: Contains business logic and utility functions
    - operations.py: Contains utility functions for file operations
 
 3. Data Flow
@@ -33,6 +34,7 @@ The bundle maker application follows a modular architecture:
    - Screens return navigation instructions to the App
    - Command handler updates app state based on external commands
    - App processes events from both user input and external commands
+   - UI code should not contain business logic; use operations.py instead
 
 USING THE CLIENT
 
@@ -60,10 +62,83 @@ The bundle maker includes a command client for sending commands and reading even
    - Format: [{"command": "command_name", "params": {...}}]
 
 4. Log File Format
-   Logs are stored in a JSON file in the system temp directory:
+   Logs are stored in two locations:
+
+   a. JSON log file in the system temp directory (used by the command client):
    - Location: [tempdir]/nanodoc_log.json
    - Format: [{"timestamp": 1234567890, "message": "...", "data": {...}}]
 
+   b. Text log file in the project directory (detailed application logs):
+   - Location: /tmp/nanodoc-logs/nanodoc_bundle_maker_[timestamp].log
+   - Format: Standard text log with timestamps and messages
+
+5. Monitoring Logs in Real-time
+
+   To monitor logs in real-time, you can use the following commands:
+
+   a. Monitor the JSON log file (command events):
+   ```
+   $ tail -f $(python -c "import tempfile; print(tempfile.gettempdir() + '/nanodoc_log.json')")
+   ```
+
+   b. Monitor the text log file (application logs):
+   ```
+   $ tail -f $(ls -t /tmp/nanodoc/logsnanodoc_bundle_maker_*.log | head -1)
+   ```
+
+   c. Send a key and view the latest log entry:
+   ```
+   $ python -m nanodoc.bundle_maker.client --key j && tail -1 $(python -c "import tempfile; print(tempfile.gettempdir() + '/nanodoc_log.json')")
+   ```
+
+   d. Monitor logs in real-time while sending commands (requires two terminal windows):
+   ```
+   # In terminal 1: Start monitoring the log file
+   $ tail -f $(python -c "import tempfile; print(tempfile.gettempdir() + '/nanodoc_log.json')")
+
+   # In terminal 2: Send commands
+   $ python -m nanodoc.bundle_maker.client --key j
+   ```
+
+DEBUGGING KEYBOARD NAVIGATION
+
+To debug keyboard navigation and verify that keyboard events are being properly captured:
+
+1. Start the application:
+   ```
+   $ python -m nanodoc.bundle_maker
+   ```
+
+2. In a separate terminal, monitor the JSON log file:
+   ```
+   $ tail -f $(python -c "import tempfile; print(tempfile.gettempdir() + '/nanodoc_log.json')")
+   ```
+
+3. Send keyboard events using the client:
+   ```
+   $ python -m nanodoc.bundle_maker.client --key j  # Move down
+   $ python -m nanodoc.bundle_maker.client --key k  # Move up
+   $ python -m nanodoc.bundle_maker.client --key KEY_HOME  # Jump to top
+   $ python -m nanodoc.bundle_maker.client --key KEY_END  # Jump to bottom
+   $ python -m nanodoc.bundle_maker.client --key KEY_PPAGE  # Page up
+   $ python -m nanodoc.bundle_maker.client --key KEY_NPAGE  # Page down
+   $ python -m nanodoc.bundle_maker.client --key " "  # Toggle selection
+   ```
+
+4. Check the application logs for detailed keyboard event handling:
+   ```
+   $ cat $(ls -t /tmp/nanodoc/logsnanodoc_bundle_maker_*.log | head -1) | grep -i "key\|press"
+   ```
+
+5. Verify keyboard events in real-time:
+   ```
+   # Send a key press
+   $ python -m nanodoc.bundle_maker.client --key j
+
+   # Check if it was logged in the JSON log file
+   $ tail -1 $(python -c "import tempfile; print(tempfile.gettempdir() + '/nanodoc_log.json')")
+   ```
+   ```
 TESTING NAVIGATION
 
 Complete navigation test from start to finish:
@@ -108,3 +183,64 @@ DEBUGGING TIPS
 
 4. Clear the command and log files if needed:
    $ rm $(python -c "import tempfile; print(tempfile.gettempdir() + '/nanodoc_*.json')")
+
+AVAILABLE OPERATIONS AND FUNCTIONS
+
+The bundle maker application provides several utility functions and operations
+that should be used by the UI code instead of implementing business logic directly
+in the UI. These functions are available in the following modules:
+
+1. nanodoc/bundle_maker/operations.py
+   - load_ui_defs(): Load UI definitions from YAML file
+   - get_files_in_directory(): Get a list of files in a directory
+   - get_file_content_with_lines(): Get the content of a file and its lines
+   - format_nice_title(): Format a filename in 'nice' style
+   - get_selected_files(): Get a list of selected files from a directory
+   - create_bundle_from_files(): Create a bundle from a list of file paths
+   - get_directory_contents(): Get the files and directories in a directory
+   - change_directory(): Change to a new directory, validating it exists
+   - get_parent_directory(): Get the parent directory of a given directory
+   - load_file_content(): Load the content of a file
+   - format_range_display(): Format a range object for display
+   - save_bundle_to_file(): Save a bundle to a file
+
+2. nanodoc/files.py
+   - parse_line_reference(): Parse a line reference string into LineRange objects
+   - convert_line_ranges_to_tuples(): Convert LineRange objects to tuples
+   - create_content_item(): Create a ContentItem from a file path
+   - verify_content(): Verify that a ContentItem is valid
+   - get_file_content(): Get content from a file with optional line selection
+   - expand_directory(): Find all files in a directory with specified extensions
+   - expand_bundles(): Extract list of files from a bundle file
+   - is_bundle_file(): Determine if a file is a bundle file
+   - expand_args(): Expand arguments into a flattened list of file paths
+   - verify_path(): Verify that a given path exists and is readable
+   - file_sort_key(): Key function for sorting files by name
+   - get_files_from_args(): Process sources and return ContentItems
+
+3. nanodoc/data.py
+   - is_single_line(): Check if a range represents a single line
+   - is_full_file(): Check if a range represents the entire file
+   - normalize_line_range(): Convert to actual line numbers based on file length
+   - line_range_to_string(): Convert a range to string representation
+   - validate_content_item(): Validate that a file exists and ranges are valid
+   - is_content_item_valid(): Check if a content item is valid
+   - load_content(): Load and cache the content from a file
+   - get_content(): Get the content, loading it if necessary
+   - create_bundle_content(): Create content for a bundle file
+   - save_bundle(): Save a bundle to a file
+
+4. nanodoc/formatting.py
+   - apply_style_to_filename(): Apply a style to a filename
+   - to_roman(): Convert integer to roman numeral
+   - format_pos(): Format the sequence prefix based on sequence type
+   - apply_sequence_to_text(): Apply the specified sequence to text
+   - create_header(): Create a formatted header with the given text
+
+DESIGN PRINCIPLES
+
+1. Separation of Concerns: UI code should focus on presentation and user interaction,
+   while business logic should be in operations.py or other appropriate modules.
+2. Reuse Existing Code: Use existing functions from nanodoc modules when possible.
+3. Error Handling: Handle errors gracefully and provide meaningful error messages.
+4. Testability: Keep code modular and testable by separating UI from business logic.

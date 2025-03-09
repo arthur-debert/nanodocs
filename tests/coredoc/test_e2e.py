@@ -3,32 +3,24 @@ import subprocess
 
 from nanodoc.formatting import create_header
 
-# Get the parent directory of the current module
-MODULE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Define sample files relative to the module directory
-SAMPLE_FILES = [
-    os.path.join(MODULE_DIR, "samples", "cake.txt"),
-    os.path.join(MODULE_DIR, "samples", "incident.txt"),
-    os.path.join(MODULE_DIR, "samples", "new-telephone.txt"),
-]
-
-# Path to the nanodoc script
-NANODOC_SCRIPT = os.path.join(MODULE_DIR, "nanodoc", "nanodoc.py")
-
-
-def test_e2e_with_nn_and_toc():
+def test_e2e_with_nn_and_toc(project_paths):
     """
     End-to-end test: process existing sample files with global line numbering
     and TOC.
     """
+    # Define sample files
+    sample_files = []
+    for filename in ["cake.txt", "incident.txt", "new-telephone.txt"]:
+        sample_files.append(project_paths.sample_file(filename))
+
     # Verify sample files exist
-    for file_path in SAMPLE_FILES:
+    for file_path in sample_files:
         assert os.path.isfile(file_path), f"Sample file not found: {file_path}"
 
     # Run nanodoc with -nn and --toc options on the sample files
     result = subprocess.run(
-        ["python", NANODOC_SCRIPT, "-nn", "--toc"] + SAMPLE_FILES,
+        ["python", project_paths.nanodoc_script, "-nn", "--toc"] + sample_files,
         capture_output=True,
         text=True,
     )
@@ -47,11 +39,11 @@ def test_e2e_with_nn_and_toc():
     telephone_header = create_header("new-telephone.txt", style="filename")
 
     # Count lines in sample files to build expectations
-    with open(SAMPLE_FILES[0], "r") as f:
+    with open(sample_files[0], "r") as f:
         cake_lines = f.readlines()
-    with open(SAMPLE_FILES[1], "r") as f:
+    with open(sample_files[1], "r") as f:
         incident_lines = f.readlines()
-    with open(SAMPLE_FILES[2], "r") as f:
+    with open(sample_files[2], "r") as f:
         telephone_lines = f.readlines()
 
     # Extract just the important parts of the output for comparison (ignoring logs)
@@ -108,18 +100,23 @@ def test_e2e_with_nn_and_toc():
     )
 
 
-def test_e2e_bundle_with_nn_and_toc(tmpdir):
+def test_e2e_bundle_with_nn_and_toc(tmpdir, project_paths):
     """
     End-to-end test: process existing sample files via a bundle file with
     global line numbering and TOC.
     """
+    # Define sample files
+    sample_files = []
+    for filename in ["cake.txt", "incident.txt", "new-telephone.txt"]:
+        sample_files.append(project_paths.sample_file(filename))
+
     # Create bundle file referencing the sample files
     bundle_file = tmpdir.join("bundle.txt")
-    bundle_file.write("\n".join(SAMPLE_FILES))
+    bundle_file.write("\n".join(sample_files))
 
     # Run nanodoc with bundle file, -nn and --toc options
     result = subprocess.run(
-        ["python", NANODOC_SCRIPT, "-nn", "--toc", str(bundle_file)],
+        ["python", project_paths.nanodoc_script, "-nn", "--toc", str(bundle_file)],
         capture_output=True,
         text=True,
     )
@@ -141,14 +138,14 @@ def test_e2e_bundle_with_nn_and_toc(tmpdir):
     actual_output = result.stdout
 
     # Basic assertions about content
-    assert toc_header in actual_output
-    assert cake_header in actual_output
+    assert toc_header in actual_output, "TOC header not found in output"
+    assert cake_header in actual_output, "cake.txt header not found"
     assert (
-        os.path.basename(SAMPLE_FILES[1]) in actual_output
-    )  # incident.txt basename in output
+        os.path.basename(sample_files[1]) in actual_output
+    ), "incident.txt not found in output"
     assert (
-        os.path.basename(SAMPLE_FILES[2]) in actual_output
-    )  # new-telephone.txt basename in output
+        os.path.basename(sample_files[2]) in actual_output
+    ), "new-telephone.txt not found in output"
 
     # Check for line numbering
     lines = actual_output.split("\n")
@@ -161,7 +158,7 @@ def test_e2e_bundle_with_nn_and_toc(tmpdir):
 
     # Check TOC format has filenames and line numbers
     actual_output.split(cake_header)[0]
-    for sample_file in SAMPLE_FILES:
+    for sample_file in sample_files:
         filename = os.path.basename(sample_file)
         # Look for the filename in the TOC section
         found_entry = False
