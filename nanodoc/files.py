@@ -8,6 +8,8 @@ import logging
 import os
 from typing import List, Tuple
 
+import pathspec
+
 from nanodoc.data import ContentItem, LineRange
 from nanodoc.data import get_content as get_item_content
 from nanodoc.data import validate_content_item
@@ -266,6 +268,34 @@ def get_file_content(file_path, line=None, start=None, end=None, parts=None):
     return "".join(lines)
 
 
+def get_gitignore_spec(directory):
+    """Get a pathspec object from a .gitignore file if it exists.
+
+    Args:
+        directory (str): The directory to look for a .gitignore file
+
+    Returns:
+        pathspec.PathSpec or None: A pathspec object for the .gitignore patterns,
+                                  or None if no .gitignore file exists
+    """
+    gitignore_path = os.path.join(directory, ".gitignore")
+    if not os.path.isfile(gitignore_path):
+        return None
+
+    try:
+        with open(gitignore_path, "r") as f:
+            gitignore_content = f.read()
+
+        # Parse the .gitignore file
+        return pathspec.PathSpec.from_lines(
+            pathspec.patterns.GitWildMatchPattern, gitignore_content.splitlines()
+        )
+    except Exception as e:
+        # Log the error but don't fail if we can't parse the .gitignore file
+        logger.error(f"Error parsing .gitignore file: {e}")
+        return None
+
+
 def expand_directory(directory, extensions=[".txt", ".md"]):
     """Find all files in a directory with specified extensions.
 
@@ -282,11 +312,34 @@ def expand_directory(directory, extensions=[".txt", ".md"]):
         f"Expanding directory with directory='{directory}', "
         f"extensions='{extensions}'"
     )
+
+    # Get gitignore spec if available
+    gitignore_spec = get_gitignore_spec(directory)
+
     matches = []
-    for root, _, filenames in os.walk(directory):
+
+    # Walk the directory tree
+    for root, dirs, filenames in os.walk(directory):
+        # Get relative paths for gitignore matching
+        rel_root = os.path.relpath(root, directory)
+
+        # Filter directories based on gitignore if available
+        if gitignore_spec:
+            # Modify dirs in-place to skip ignored directories
+            dirs[:] = [
+                d
+                for d in dirs
+                if not gitignore_spec.match_file(os.path.join(rel_root, d))
+            ]
+
+        # Filter files based on extensions and gitignore
         for filename in filenames:
             if any(filename.endswith(ext) for ext in extensions):
-                matches.append(os.path.join(root, filename))
+                file_path = os.path.join(root, filename)
+                rel_path = os.path.join(rel_root, filename)
+
+                if not gitignore_spec or not gitignore_spec.match_file(rel_path):
+                    matches.append(file_path)
     return sorted(matches)
 
 

@@ -8,6 +8,9 @@ authors = [
 readme = "README.txt"
 requires-python = ">=3.9"
 license = {file = "LICENSE"}
+dependencies = [
+    "pathspec>=0.12.0"
+]
 keywords = ["documentation", "bundler", "minimalist", "text", "prompts"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -58,6 +61,9 @@ twine = "^6.1.0"
 jinja2 = "^3.1.6"
 
 # do not use: [tool.poetry.scripts]
+
+[tool.poetry.dependencies]
+pathspec = "^0.12.1"
 [tool.scripts]
 nanodoc = "nanodoc.nanodoc:main"
 pmrun = "nanodoc.nanodoc:main"

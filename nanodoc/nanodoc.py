@@ -62,6 +62,7 @@ nanodoc offers three ways to specify the files you want to bundle:
 - `-n`: Enable per-file line numbering (01, 02, etc.)
 - `-nn`: Enable global line numbering (001, 002, etc.)
 - `--toc`: Include a table of contents at the beginning
+| - `--maker`: Launch interactive bundle maker interface to create bundles
 | - `--export-bundle BUNDLE_FILE`: Export a bundle file that can be used to recreate this document
 | - `--no-header`: Hide file headers completely
 | - `--sequence`: Add sequence numbers to headers
@@ -91,6 +92,7 @@ nanodoc -nn --toc                           # Bundle all files with TOC and glob
 nanodoc --toc -v                            # Verbose bundle with TOC
 nanodoc some_directory                      # Add all files in directory
 | nanodoc --export-bundle bundle.txt file1.txt file2.txt  # Export a bundle file for later use
+| | nanodoc --maker                           # Launch interactive bundle maker interface
 | nanodoc --no-header file1.txt file2.txt   # Hide headers
 | nanodoc --sequence=roman file1.txt        # Use roman numerals (i., ii., etc.)
 | nanodoc --style=filename file1.txt        # Use filename style instead of nice (default)
@@ -107,6 +109,7 @@ import sys
 # Handle both package and direct execution
 try:
     # Try relative imports first (when used as a package)
+    from .bundle_maker import main as bundle_maker_main
     from .core import process_all
     from .data import Bundle, save_bundle
     from .files import get_files_from_args
@@ -114,6 +117,7 @@ except ImportError:
     # Fall back to absolute imports (when run as a script)
     # Add parent directory to path to make nanodoc a package
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    from nanodoc.bundle_maker import main as bundle_maker_main
     from nanodoc.core import process_all
     from nanodoc.data import Bundle, save_bundle
     from nanodoc.files import get_files_from_args
@@ -214,6 +218,9 @@ def parse_args():
         metavar="BUNDLE_FILE",
         help="Export a bundle file that can be used to recreate this document",
     )
+    parser.add_argument(
+        "--maker", action="store_true", help="Launch interactive bundle maker interface"
+    )
 
     parser.add_argument("sources", nargs="*", help="Source file(s)")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
@@ -244,7 +251,7 @@ def _check_help(args):
         print(__doc__)
         sys.exit(0)
 
-    if not args.sources and args.help is None:
+    if not args.sources and args.help is None and not args.maker:
         parser = argparse.ArgumentParser(
             description="Generate documentation from source code.",
             prog="nanodoc",
@@ -287,6 +294,11 @@ def main():
     try:
         # Set up logging based on verbose flag
         setup_logging(to_stderr=True, enabled=args.v)
+
+        # If --maker flag is provided, launch the bundle maker interface
+        if args.maker:
+            bundle_maker_main()
+            return
 
         # Get verified content items from arguments
         content_items = get_files_from_args(args.sources)
