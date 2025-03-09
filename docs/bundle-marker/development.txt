@@ -1,0 +1,110 @@
+BUNDLE MAKER DEVELOPMENT GUIDE
+
+APPLICATION ARCHITECTURE
+
+The bundle maker application follows a modular architecture:
+
+1. Package Structure
+   nanodoc/bundle_maker/
+   ├── __init__.py        # Package initialization
+   ├── __main__.py        # Entry point for direct execution
+   ├── main.py            # Main application logic
+   ├── operations.py      # Utility functions
+   ├── client.py          # Command client for external control
+   ├── command_handler.py # Command processing system
+   └── screens/           # UI screens
+       ├── __init__.py    # Screen package initialization
+       ├── app.py         # App controller
+       ├── base.py        # Base screen class
+       ├── bundle_summary.py # Bundle summary screen
+       ├── file_detail.py    # File detail screen
+       └── file_selector.py  # File selector screen
+
+2. Component Responsibilities
+   - main.py: Initializes the application, sets up colors, and registers screens
+   - app.py: Manages screen transitions and processes external commands
+   - base.py: Provides common functionality for all screens
+   - Screen classes: Handle rendering and user input for specific screens
+   - command_handler.py: Watches for external commands and executes them
+   - operations.py: Contains utility functions for file operations
+
+3. Data Flow
+   - App state is shared between all components
+   - Screens return navigation instructions to the App
+   - Command handler updates app state based on external commands
+   - App processes events from both user input and external commands
+
+USING THE CLIENT
+
+The bundle maker includes a command client for sending commands and reading events:
+
+1. Starting the Application
+   $ python -m nanodoc.bundle_maker
+
+2. Sending Commands
+   - Send a key press:
+     $ python -m nanodoc.bundle_maker.client --key n
+
+   - Navigate to a specific screen:
+     $ python -m nanodoc.bundle_maker.client --navigate file_detail
+
+   - Get the current state:
+     $ python -m nanodoc.bundle_maker.client --state
+
+   - View the logs:
+     $ python -m nanodoc.bundle_maker.client --logs
+
+3. Command File Format
+   Commands are stored in a JSON file in the system temp directory:
+   - Location: [tempdir]/nanodoc_commands.json
+   - Format: [{"command": "command_name", "params": {...}}]
+
+4. Log File Format
+   Logs are stored in a JSON file in the system temp directory:
+   - Location: [tempdir]/nanodoc_log.json
+   - Format: [{"timestamp": 1234567890, "message": "...", "data": {...}}]
+
+TESTING NAVIGATION
+
+Complete navigation test from start to finish:
+
+1. Start the application:
+   $ python -m nanodoc.bundle_maker
+
+2. Navigate from File Selector to Bundle Summary:
+   $ python -m nanodoc.bundle_maker.client --key n
+
+3. Navigate from Bundle Summary to File Detail:
+   $ python -m nanodoc.bundle_maker.client --key e
+
+4. Navigate back to Bundle Summary:
+   $ python -m nanodoc.bundle_maker.client --key b
+
+5. Navigate back to File Selector:
+   $ python -m nanodoc.bundle_maker.client --key a
+
+6. Quit the application:
+   $ python -m nanodoc.bundle_maker.client --key q
+
+7. Verify navigation with logs:
+   $ python -m nanodoc.bundle_maker.client --logs
+
+Alternative: Direct navigation using events:
+   $ python -m nanodoc.bundle_maker.client --navigate file_selector
+   $ python -m nanodoc.bundle_maker.client --navigate bundle_summary
+   $ python -m nanodoc.bundle_maker.client --navigate file_detail
+   $ python -m nanodoc.bundle_maker.client --key q
+
+DEBUGGING TIPS
+
+1. Check the log file for command execution history:
+   $ python -m nanodoc.bundle_maker.client --logs
+
+2. Get the current application state:
+   $ python -m nanodoc.bundle_maker.client --state
+
+3. If the application is unresponsive, send a quit command:
+   $ python -m nanodoc.bundle_maker.client --key q
+
+4. Clear the command and log files if needed:
+   $ rm $(python -c "import tempfile; print(tempfile.gettempdir() + '/nanodoc_*.json')")
