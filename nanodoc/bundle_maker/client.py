@@ -2,8 +2,8 @@
 """
 Command client for the nanodoc bundle maker.
 
-This script demonstrates how to send commands to the bundle maker app
-and read the log file to see the results.
+This script provides a client for sending commands to the bundle maker app
+and reading the log file to see the results.
 """
 
 import json

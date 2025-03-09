@@ -5,13 +5,14 @@ This module provides the App class that handles screen transitions
 and maintains the application state.
 """
 
+import curses
 import os
 import tempfile
 import queue
 from typing import Any, Dict, Optional, Type
 
 from .base import Screen
-from .command_handler import CommandHandler
+from ..command_handler import CommandHandler
 
 
 class App:
@@ -19,7 +20,7 @@ class App:
 
     def __init__(self, stdscr, ui_defs: Dict[str, Any]):
         """Initialize the app.
-
+        
         Args:
             stdscr: The curses standard screen
             ui_defs: The UI definitions loaded from YAML
@@ -36,7 +37,6 @@ class App:
         
         self.screens = {}
         self.current_screen = None
-
         
         # Set up command handler
         self.command_file = os.path.join(tempfile.gettempdir(), "nanodoc_commands.json")
@@ -51,9 +51,10 @@ class App:
                                              lambda params: self._handle_event(params))
         
         self.command_handler.start()
+    
     def register_screen(self, name: str, screen_class: Type[Screen]) -> None:
         """Register a screen class.
-
+        
         Args:
             name: The name of the screen
             screen_class: The screen class
@@ -72,33 +73,31 @@ class App:
         if 'event' in params:
             self.event_queue.put(params)
             return {'result': 'success', 'event': params['event']}
-
-    def navigate_to(
-        self, screen_name: str, params: Optional[Dict[str, Any]] = None
-    ) -> None:
+    
+    def navigate_to(self, screen_name: str, params: Optional[Dict[str, Any]] = None) -> None:
         """Navigate to a screen.
-
+        
         Args:
             screen_name: The name of the screen to navigate to
             params: Optional parameters to pass to the screen
-
+        
         Raises:
             ValueError: If the screen is not registered
         """
         if screen_name not in self.screens:
             raise ValueError(f"Screen '{screen_name}' not registered")
-
+        
         # Update app state with params
         if params:
             self.app_state.update(params)
             
         # Log navigation
         self.command_handler.log(f"Navigating to screen: {screen_name}", params)
-
+        
         # Create and run the screen
         screen = self.screens[screen_name](self.stdscr, self.ui_defs, self.app_state)
         self.current_screen = screen_name
-
+        
         # Prepare the screen
         self.stdscr.clear()
         screen.render()
@@ -130,14 +129,14 @@ class App:
             self.stdscr.clear()
             screen.render()
             self.stdscr.refresh()
-
+        
         # Navigate to the next screen if specified
         if next_screen:
             self.navigate_to(next_screen, next_params)
-
+    
     def run(self, initial_screen: str = "file_selector") -> None:
         """Run the app.
-
+        
         Args:
             initial_screen: The name of the initial screen to show
         """
