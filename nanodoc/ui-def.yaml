@@ -1,0 +1,155 @@
+# UI definitions for the nanodoc bundle maker
+# This file contains all UI strings and colors used in the bundle maker interface
+
+# Colors
+colors:
+  header:
+    fg: "white"
+    bg: "blue"
+  success:
+    fg: "green"
+    bg: "default"
+  error:
+    fg: "red"
+    bg: "default"
+  highlight:
+    fg: "yellow"
+    bg: "default"
+  status_bar:
+    fg: "black"
+    bg: "white"
+  nav_bar_title:
+    fg: "white"
+    bg: "blue"
+  nav_bar_menu:
+    fg: "white"
+    bg: "blue"
+  nav_bar_selected:
+    fg: "black"
+    bg: "white"
+  dialog:
+    fg: "white"
+    bg: "blue"
+  dialog_button:
+    fg: "black"
+    bg: "white"
+  file_preview:
+    fg: "white"
+    bg: "default"
+  file_preview_line_number:
+    fg: "cyan"
+    bg: "default"
+  file_preview_selected:
+    fg: "black"
+    bg: "yellow"
+
+# UI Strings
+strings:
+  # Application name
+  app_name: "NANODOC BUNDLE MAKER"
+
+  # Screen titles
+  screen_title_directory: "NANODOC BUNDLE MAKER / DIRECTORY SELECTION"
+  screen_title_file_selector: "NANODOC BUNDLE MAKER / SELECT FILES"
+  screen_title_bundle_summary: "NANODOC BUNDLE MAKER / BUNDLE SUMMARY"
+  screen_title_file_detail: "NANODOC BUNDLE MAKER / FILE DETAIL"
+  screen_title_save_bundle: "NANODOC BUNDLE MAKER / SAVE BUNDLE"
+  screen_title_line_context: "NANODOC BUNDLE MAKER / FILE DETAIL / LINE CONTEXT"
+  screen_title_select_line: "NANODOC BUNDLE MAKER / FILE DETAIL / SELECT LINE"
+  screen_title_add_ranges:
+    "NANODOC BUNDLE MAKER / FILE DETAIL / ADD MORE RANGES?"
+  screen_title_help: "HELP"
+  screen_title_error: "ERROR"
+  screen_title_success: "SUCCESS"
+
+  # File Selector screen
+  file_selector:
+    directory_prompt:
+      "Enter a directory to search for files (or press Enter for current
+      directory):"
+    current_directory: "Current directory: {}"
+    instructions: "Enter a file path, or:"
+    finish: "- Enter 'q' to finish and save the bundle"
+    change_dir: "- Enter 'd' to change directory"
+    available_files: "Available files:"
+    no_files: "No text or markdown files found in this directory."
+    more_files: "... and {} more files"
+    prompt:
+      "Enter file number, path, 'q' to finish, or 'd' to change directory: "
+
+  # Bundle Summary screen
+  bundle_summary:
+    empty: "Bundle is empty. Select some files to get started."
+    contents: "Current bundle contains {} items:"
+    entire_file: "entire file"
+    single_line: "line {}"
+    lines: "lines {}-{}"
+    options: "Options:"
+    save: "s - Save bundle"
+    add_more: "a - Add more files"
+
+  # File Detail screen
+  file_detail:
+    actions: "Actions:"
+    select_all: "[SPACE] Select entire file"
+    select_part: "[0-9] Select specific line ranges"
+    return: "[B] Return to Bundle Summary"
+    type_line: "[0-9] Type line number"
+    set_start: "[TAB] Set start line"
+    select_range: "[ENTER] Select range"
+    return_start: "[B] Return to start selection"
+    selected_entire: "Selected entire file: {}"
+    selected_line: "Selected line {}"
+    selected_lines: "Selected lines {}-{}"
+    selected_from: "{} from {}"
+    showing_lines: "Showing lines {} to {}:"
+    valid_range: "Valid range: {} to {}"
+    cancel: "Enter 'q' to cancel"
+    line_error: "Line number must be between {} and {}"
+    invalid_input: "Invalid input. Please enter a number."
+    more_lines: "... ({} more lines)"
+    total_lines: "Total lines: {}"
+
+  # Add More Ranges dialog
+  add_ranges:
+    prompt: "Do you want to select more ranges from {}?"
+    yes: "y - Yes, select more ranges"
+    no: "n - No, return to Bundle Summary"
+
+  # Save Bundle screen
+  save_bundle:
+    prompt: "Enter a filename for the bundle (default: nanodoc-bundle.txt):"
+    success: "Bundle saved to {}"
+    error: "Error saving bundle: {}"
+
+  # Status messages
+  status:
+    start_type: "Start: Type line number"
+    start_line: "Start: L{}"
+    range_type: "Range: L{}-? (Type end line)"
+    range_selected: "Range: L{}-{}"
+
+  # Error and success messages
+  messages:
+    invalid_directory: "Invalid directory: {}"
+    invalid_file_number: "Invalid file number"
+    file_not_found: "File not found: {}"
+    processing_file_error: "Error processing file: {}"
+
+  # Common UI elements
+  common:
+    continue_prompt: "Press any key to continue..."
+
+  # Help text
+  help_text: |
+    NANODOC BUNDLE MAKER HELP
+
+    Global Keybindings:
+      q        - Quit the application without confirmation
+      h        - Show this help dialog
+      Ctrl+C   - Exit the application immediately
+
+    Navigation:
+      File Selector → Bundle Summary → File Detail (optional) → Save
+
+    Press any key to close this help dialog.
