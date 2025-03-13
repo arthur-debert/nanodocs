@@ -11,8 +11,8 @@ PACKAGE_MANAGERS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Get the repository root (parent of package-managers)
 REPO_ROOT="$(cd "$PACKAGE_MANAGERS_DIR/.." && pwd)"
 
-# Default package name is nanodoc if not provided
-PACKAGE_NAME=${1:-nanodoc}
+# Use environment variable if available, otherwise default to nanodoc
+PACKAGE_NAME=${PACKAGE_NAME:-${1:-nanodoc}}
 OUTPUT_DIR="${SCRIPT_DIR}"
 
 # Check if we're running on a Debian-based system

@@ -5,7 +5,8 @@
 # Parse command line arguments
 WORKFLOW_NAME=""
 WORKFLOW_FILE=""
-PACKAGE_NAME="nanodoc"
+# Use environment variable if available, otherwise default to "nanodoc"
+PACKAGE_NAME="${PACKAGE_NAME:-nanodoc}"
 DESCRIPTION=""
 FORCE_UPDATE="false"
 FIELDS=()

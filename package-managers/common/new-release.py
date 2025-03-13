@@ -21,10 +21,13 @@ Options:
     --commit                Only commit package manager manifests
     --force                 Force update even if no changes detected
     --version=<version>     Specify version (default: from pyproject.toml)
+    --package-name=<name>   Specify package name (default: from
+                            pyproject.toml or PACKAGE_NAME env var)
     --help                  Show this help message
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -94,6 +97,12 @@ def parse_args():
         help="Path to release notes file"
     )
     
+    parser.add_argument(
+        "--package-name",
+        help=("Specify package name (default: from pyproject.toml or "
+              "PACKAGE_NAME env var)")
+    )
+    
     return parser.parse_args()
 
 
@@ -141,6 +150,24 @@ def get_version():
     except Exception as e:
         print(f"Error getting version: {e}")
         sys.exit(1)
+
+
+def get_package_name():
+    """
+    Get the package name from pyproject.toml.
+    Returns the name of the package as defined in pyproject.toml.
+    """
+    try:
+        # Try to get the package name from pyproject.toml using poetry
+        result = run_command(["poetry", "version"], check=False)
+        if result:
+            # The output format is "package-name version"
+            return result.split()[0]
+    except Exception as e:
+        print(f"Warning: Could not determine package name from pyproject.toml: {e}")
+    
+    # Fallback to a default name
+    return "unknown-package"
 
 
 def local_pypi_release(version, release_notes_file=None, steps=None):
@@ -424,8 +451,14 @@ def main():
     if not steps:
         steps = ["build", "verify", "commit"]
     
-    # Default package name
-    package_name = "nanodoc"  # This could be made configurable
+    # Get package name from arguments, environment variable, or pyproject.toml
+    package_name = args.package_name
+    if not package_name:
+        package_name = os.environ.get("PACKAGE_NAME")
+    if not package_name:
+        package_name = get_package_name()
+    
+    print(f"Using package name: {package_name}")
     
     # Process GitHub release if requested
     if "github" in targets:

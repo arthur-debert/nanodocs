@@ -15,18 +15,23 @@ Usage examples:
 
 import importlib.metadata
 import argparse
+import os
 
 
-def get_package_metadata(package_name='nanodoc'):
+def get_package_metadata(package_name=None):
     """
     Get metadata for the specified package.
 
     Args:
-        package_name (str): The name of the package to query (default: nanodoc)
+        package_name (str): The name of the package to query (default: from PACKAGE_NAME env var or 'nanodoc')
 
     Returns:
         dict or None: Package metadata dictionary if found, None otherwise
     """
+    # Use provided package_name, or environment variable, or default to 'nanodoc'
+    if package_name is None:
+        package_name = os.environ.get('PACKAGE_NAME', 'nanodoc')
+    
     try:
         metadata = importlib.metadata.metadata(package_name)
         # Print the metadata keys for debugging
@@ -61,7 +66,12 @@ Examples:
     parser.add_argument('--home-page', action='store_true', help='Display package home page')
     parser.add_argument('--license', action='store_true', help='Display package license')
     parser.add_argument('--all', action='store_true', help='Display all metadata')
-    parser.add_argument('package_name', nargs='?', default='nanodoc', help='Package name to query (default: nanodoc)')
+    parser.add_argument(
+        'package_name', 
+        nargs='?', 
+        default=os.environ.get('PACKAGE_NAME', 'nanodoc'), 
+        help='Package name to query (default: from PACKAGE_NAME env var or nanodoc)'
+    )
 
     args = parser.parse_args()
 

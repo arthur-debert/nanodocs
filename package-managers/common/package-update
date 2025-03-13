@@ -102,8 +102,8 @@ if [[ -z ${VERSION} ]]; then
   exit 1
 fi
 
-# Default package name
-PACKAGE_NAME="nanodoc"
+# Default package name - use environment variable if available
+PACKAGE_NAME="${PACKAGE_NAME:-nanodoc}"
 
 # Determine which package system to update
 if [[ -z ${PACKAGE_SYSTEM} ]]; then
