@@ -1,0 +1,240 @@
+#!/bin/bash
+# Common script to trigger and track GitHub Actions workflows
+# This script can be used for both Homebrew and APT package updates
+
+# Parse command line arguments
+WORKFLOW_NAME=""
+WORKFLOW_FILE=""
+# Use environment variable if available, otherwise default to "nanodoc"
+PACKAGE_NAME="${PACKAGE_NAME:-nanodoc}"
+DESCRIPTION=""
+FORCE_UPDATE="false"
+FIELDS=()
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --workflow-name | --workflow)
+    WORKFLOW_NAME="$2"
+    shift 2
+    ;;
+  --workflow-file)
+    WORKFLOW_FILE="$2"
+    shift 2
+    ;;
+  --package-name)
+    PACKAGE_NAME="$2"
+    shift 2
+    ;;
+  --description)
+    DESCRIPTION="$2"
+    shift 2
+    ;;
+  --force)
+    FORCE_UPDATE="true"
+    shift
+    ;;
+  --field)
+    FIELDS+=("$2")
+    shift 2
+    ;;
+  *)
+    echo "Unknown option: $1"
+    exit 1
+    ;;
+  esac
+done
+
+# Ensure we're in the project root
+cd "$(dirname "$0")/../.."
+
+# Check if gh CLI is installed
+if ! command -v gh &>/dev/null; then
+  echo "Error: GitHub CLI (gh) is not installed."
+  echo "Please install it from https://cli.github.com/"
+  exit 1
+fi
+
+# Check if user is authenticated with GitHub
+if ! gh auth status &>/dev/null; then
+  echo "Error: You are not authenticated with GitHub CLI."
+  echo "Please run 'gh auth login' first."
+  exit 1
+fi
+
+# Get the current branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ -z ${CURRENT_BRANCH} ]]; then
+  echo "Error: Could not determine current branch."
+  exit 1
+fi
+
+# Get the default branch (usually main or master)
+DEFAULT_BRANCH=$(git remote show origin | grep "HEAD branch" | cut -d ":" -f 2 | xargs)
+if [[ -z ${DEFAULT_BRANCH} ]]; then
+  DEFAULT_BRANCH="main" # Fallback to main if we can't determine the default branch
+fi
+
+# Check if the current branch exists in the remote repository
+if ! git ls-remote --heads origin ${CURRENT_BRANCH} | grep -q ${CURRENT_BRANCH}; then
+  echo "Branch '${CURRENT_BRANCH}' does not exist in the remote repository."
+  echo "Pushing current branch '${CURRENT_BRANCH}' to remote..."
+  git push -u origin ${CURRENT_BRANCH}
+  BRANCH_TO_USE=${CURRENT_BRANCH}
+else
+  BRANCH_TO_USE=${CURRENT_BRANCH}
+fi
+
+# Get the current version from pyproject.toml
+VERSION=$(poetry version -s)
+if [[ -z ${VERSION} ]]; then
+  echo "Error: Could not determine current version from pyproject.toml."
+  exit 1
+fi
+
+# Use default description if not provided
+if [[ -z ${DESCRIPTION} ]]; then
+  if [[ ${WORKFLOW_NAME} == "Update Homebrew Formula" ]]; then
+    DESCRIPTION="a Homebrew formula update"
+  elif [[ ${WORKFLOW_NAME} == "Update APT Package" ]]; then
+    DESCRIPTION="an APT package update"
+  else
+    DESCRIPTION="a workflow update"
+  fi
+fi
+
+echo "Current version: ${VERSION}"
+echo "Branch to use: ${BRANCH_TO_USE}"
+echo "Triggering ${DESCRIPTION} for ${PACKAGE_NAME} version ${VERSION} from branch ${BRANCH_TO_USE}..."
+
+# Trigger the workflow
+echo "Triggering ${DESCRIPTION} workflow..."
+
+# Map workflow names to file paths
+if [[ -z "${WORKFLOW_FILE}" ]]; then
+  if [[ "${WORKFLOW_NAME}" == "Update Homebrew Formula" ]]; then
+    WORKFLOW_FILE=".github/workflows/update-homebrew-formula.yml"
+  elif [[ "${WORKFLOW_NAME}" == "Update APT Package" ]]; then
+    WORKFLOW_FILE=".github/workflows/update-apt-package.yml"
+  elif [[ "${WORKFLOW_NAME}" == "Publish to PyPI" ]]; then
+    WORKFLOW_FILE=".github/workflows/pypi-publish.yml"
+  else
+    # Use the unified workflow for all package managers
+    WORKFLOW_FILE=".github/workflows/package-release.yml"
+
+    # Set the publish_to field based on the workflow name
+    if [[ "${WORKFLOW_NAME}" == *"Homebrew"* ]]; then
+      FIELDS+=("publish_to=brew")
+    elif [[ "${WORKFLOW_NAME}" == *"APT"* ]]; then
+      FIELDS+=("publish_to=apt")
+    elif [[ "${WORKFLOW_NAME}" == *"PyPI"* ]]; then
+      FIELDS+=("publish_to=pypi")
+    fi
+  fi
+fi
+
+# Check if we're on a non-default branch and no workflow file is specified
+if [[ ${BRANCH_TO_USE} != "${DEFAULT_BRANCH}" && -z ${WORKFLOW_FILE} ]]; then
+  echo "You are on branch '${BRANCH_TO_USE}', which is not the default branch '${DEFAULT_BRANCH}'."
+  echo "GitHub Actions workflows are only registered when they are on the default branch."
+  echo "Using workflow file path instead..."
+
+  echo "Using workflow file: ${WORKFLOW_FILE}"
+fi
+
+# Determine how to trigger the workflow
+if [[ -n ${WORKFLOW_FILE} ]]; then
+  echo "Attempting to run the workflow directly with the file path..."
+
+  # Build the command
+  CMD="gh workflow run \"${WORKFLOW_FILE}\" --ref \"${BRANCH_TO_USE}\" --field force_update=${FORCE_UPDATE} --field package_name=${PACKAGE_NAME}"
+
+  # Add any additional fields
+  for field in "${FIELDS[@]}"; do
+    CMD="${CMD} --field ${field}"
+  done
+
+  # Execute the command
+  echo "Running: ${CMD}"
+  if eval "${CMD}"; then
+    echo "Workflow triggered successfully!"
+  else
+    echo "Warning: Could not trigger the workflow directly."
+    echo "This could be because the workflow file has syntax errors or is not properly configured."
+    echo "Continuing anyway..."
+  fi
+elif [[ -n ${WORKFLOW_NAME} ]]; then
+  # Build the command
+  CMD="gh workflow run \"${WORKFLOW_NAME}\" --ref \"${BRANCH_TO_USE}\" --field force_update=${FORCE_UPDATE} --field package_name=${PACKAGE_NAME}"
+
+  # Add any additional fields
+  for field in "${FIELDS[@]}"; do
+    CMD="${CMD} --field ${field}"
+  done
+
+  # Execute the command
+  echo "Running: ${CMD}"
+  if eval "${CMD}"; then
+    echo "Workflow triggered successfully!"
+  else
+    echo "Warning: Could not find the '${WORKFLOW_NAME}' workflow."
+    echo "This could be because:"
+    echo "1. The workflow file hasn't been committed and pushed to GitHub yet."
+    echo "2. The workflow file has been committed but GitHub hasn't registered it yet."
+
+    echo "Attempting to run the workflow directly with the file path: ${WORKFLOW_FILE}"
+
+    # Build the command again with the file path
+    CMD="gh workflow run \"${WORKFLOW_FILE}\" --ref \"${BRANCH_TO_USE}\" --field force_update=${FORCE_UPDATE} --field package_name=${PACKAGE_NAME}"
+
+    # Add any additional fields
+    for field in "${FIELDS[@]}"; do
+      CMD="${CMD} --field ${field}"
+    done
+
+    # Execute the command
+    echo "Running: ${CMD}"
+    if eval "${CMD}"; then
+      echo "Workflow triggered successfully!"
+    else
+      echo "Warning: Could not trigger the workflow directly."
+      echo "This could be because the workflow file has syntax errors or is not properly configured."
+      echo "Continuing anyway..."
+    fi
+  fi
+else
+  echo "Error: No workflow name or file specified."
+  exit 1
+fi
+
+echo ""
+# Wait a moment for the workflow to be registered
+echo "Waiting for workflow to start..."
+sleep 2
+
+# Get the run ID of the latest workflow
+if [[ -n ${WORKFLOW_FILE} ]]; then
+  WORKFLOW_PARAM="--workflow=${WORKFLOW_FILE}"
+else
+  WORKFLOW_PARAM="--workflow=\"${WORKFLOW_NAME}\""
+fi
+
+RUN_ID=$(gh run list ${WORKFLOW_PARAM} --limit 1 --json databaseId --jq '.[0].databaseId')
+
+# Display the status of the workflow run
+echo "Latest workflow run status:"
+echo ""
+if [[ -n ${WORKFLOW_FILE} ]]; then
+  gh run list --workflow="${WORKFLOW_FILE}" --limit 1
+else
+  gh run list --workflow="${WORKFLOW_NAME}" --limit 1
+fi
+
+if [[ -n ${RUN_ID} ]]; then
+  echo ""
+  echo "You can check the detailed status with:"
+  echo "gh run view ${RUN_ID}"
+  echo ""
+  echo "Watching workflow progress in real-time..."
+  gh run watch "${RUN_ID}"
+fi
