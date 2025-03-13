@@ -18,7 +18,30 @@ echo "Updating Homebrew package..."
 
 echo ""
 echo "Updating APT package..."
-"$PROJECT_ROOT/package-managers/debian/update-apt-package.sh" --non-interactive $FORCE_FLAG
+
+# Check if we're on a Debian-based system
+if [ -f /etc/debian_version ]; then
+    # We're on a Debian-based system, so we can build the package locally
+    "$PROJECT_ROOT/package-managers/debian/update-apt-package.sh" --non-interactive $FORCE_FLAG
+else
+    # We're not on a Debian-based system, so we'll just trigger the workflow
+    echo "Not on a Debian-based system, triggering the APT package update workflow directly..."
+
+    # Get the current branch
+    BRANCH=$(git branch --show-current)
+
+    # Get the package name
+    PACKAGE_NAME="nanodoc"
+
+    # Determine if we should force the update
+    FORCE_UPDATE="false"
+    if [[ "$FORCE_FLAG" == "--force" ]]; then
+        FORCE_UPDATE="true"
+    fi
+
+    # Trigger the workflow
+    gh workflow run "Update APT Package" --ref "${BRANCH}" --field force_update=${FORCE_UPDATE} --field package_name=${PACKAGE_NAME}
+fi
 
 echo ""
 echo "Both package updates have been triggered."
