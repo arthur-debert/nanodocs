@@ -7,6 +7,7 @@
 import logging
 import os
 from typing import List, Tuple
+import re
 
 from nanodoc.data import ContentItem, LineRange
 from nanodoc.data import get_content as get_item_content
@@ -367,9 +368,51 @@ def process_mixed_content_bundle(lines):
                 # Keep the original line if file can't be read
                 result.append(line)
         else:
-            # Regular text line - keep as is
-            result.append(line)
-    return "\n".join(result)
+            # Check for inline file references @[file path]
+            inline_pattern = r'@\[(.*?)\]'
+            matches = re.findall(inline_pattern, line)
+            
+            if matches:
+                processed_line = line
+                for file_path in matches:
+                    if os.path.isfile(file_path):
+                        try:
+                            # Get file content and remove line breaks
+                            file_content = get_file_content(file_path)
+                            inline_content = file_content.replace('\n', ' ').strip()
+                            # Replace the @[file path] with the inline content
+                            processed_line = processed_line.replace(f'@[{file_path}]', inline_content)
+                        except Exception as e:
+                            logger.warning(f"Error reading inline file {file_path}: {e}")
+                            # Keep the original reference if file can't be read
+                result.append(processed_line)
+            else:
+                # Regular text line - keep as is
+                result.append(line)
+    
+    # Join all lines with newlines
+    joined_result = "\n".join(result)
+    
+    # Process any inline file references that might span multiple lines
+    inline_pattern = r'@\[(.*?)\]'
+    matches = re.findall(inline_pattern, joined_result)
+    
+    if matches:
+        processed_result = joined_result
+        for file_path in matches:
+            if os.path.isfile(file_path):
+                try:
+                    # Get file content and remove line breaks
+                    file_content = get_file_content(file_path)
+                    inline_content = file_content.replace('\n', ' ').strip()
+                    # Replace the @[file path] with the inline content
+                    processed_result = processed_result.replace(f'@[{file_path}]', inline_content)
+                except Exception as e:
+                    logger.warning(f"Error reading inline file {file_path}: {e}")
+                    # Keep the original reference if file can't be read
+        return processed_result
+    
+    return joined_result
 
 
 def process_traditional_bundle(lines):
