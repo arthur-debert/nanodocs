@@ -107,5 +107,6 @@ def test_is_bundle_file_with_multiple_lines_and_invalid_paths(tmpdir):
     referenced_file = tmpdir.join("referenced_file.txt")
     referenced_file.write("Some content")
 
-    # Test that the bundle file is recognized as a bundle
-    assert not is_bundle_file(str(bundle_file))
+    # With the new implementation, a file is considered a bundle if any line
+    # is a valid file path, so this should return True
+    assert is_bundle_file(str(bundle_file))

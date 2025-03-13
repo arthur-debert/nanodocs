@@ -15,3 +15,27 @@ Three ways to tell nanodoc which files to bundle:
    chapter1.txt
    images/diagram.md
    /absolute/path/to/notes.txt
+
+4. LIVE BUNDLE FILES:
+   nanodoc livebundle.txt
+   Where livebundle.txt can mix text and file paths:
+   
+   Introduction to the document
+   chapter1.txt
+   This text appears between chapters
+   chapter2.txt
+   Conclusion
+   
+   In live bundles, file paths are replaced with their content inline.
+   No file titles or line number resets occur at file boundaries.
+   This allows for seamless integration of content from multiple files.
+
+   Example:
+   If chapter1.txt contains "This is chapter 1 content" and
+   chapter2.txt contains "This is chapter 2 content", the result will be:
+
+   Introduction to the document
+   This is chapter 1 content
+   This text appears between chapters
+   This is chapter 2 content
+   Conclusion
