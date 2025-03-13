@@ -12,53 +12,48 @@ Supports both local execution and GitHub Actions workflows.
 
    1.1 Copy the py-release directory to your project root
    1.2 Run the setup script:
-       ./py-release/setup
-   1.3 Dependencies:
-       - Python 3.7+
-       - Poetry
-       - GitHub CLI (gh)
-       - Jinja2 (for templating)
-       - Twine (for PyPI uploads)
-       - For local APT builds: dpkg-deb, devscripts, debhelper
+       ./py-release/setup # will install dependencies if not available [deps]
 
 2. USAGE
 
-   2.1 The new-release command
+2.1 The new-release command. By default it will publish to all targets using GitHub Actions.
 
-   py-release/new-release [options]
+    py-release/new-release
 
-   Options:
-   --target=<target>       Specify a target to publish to (can be used multiple times)
-                           Valid targets: pypi, apt, brew, github
-   --local                 Run locally instead of using GitHub Actions
-   --build                 Only build package manager manifests
-   --verify                Only verify/test package manager manifests
-   --commit                Only commit package manager manifests
-   --force                 Force update even if no changes detected
-   --version=<version>     Specify version (default: from pyproject.toml)
-   --package-name=<name>   Specify package name (default: from pyproject.toml
-                           or PACKAGE_NAME environment variable)
+Options:
 
-   Examples:
-   py-release/new-release --target=brew --target=apt --local
-   py-release/new-release --target=pypi --target=github
-   py-release/new-release --target=github --local
-   py-release/new-release --target=brew --package-name=mypackage --local
+    --target=<target>       Specify a target to publish to (can be used multiple times)
+                            Valid targets: pypi, apt, brew, github
+    --local                 Run locally instead of using GitHub Actions
+    --build                 Only build package manager manifests
+    --verify                Only verify/test package manager manifests
+    --commit                Only commit package manager manifests
+    --force                 Force update even if no changes detected
+    --version=<version>     Specify version (default: from pyproject.toml)
+    --package-name=<name>   Specify package name (default: from pyproject.toml
+                        or PACKAGE_NAME environment variable)
 
-   You can also set the package name using an environment variable:
-   PACKAGE_NAME=mypackage py-release/new-release --target=brew --local
+Examples:
 
-   2.2 GitHub Workflow
+    py-release/new-release --target=brew --target=apt --local
+    py-release/new-release --target=pypi --target=github
+    py-release/new-release --target=github --local
+    py-release/new-release --target=brew --package-name=my package --local
 
-   The unified workflow (package-release.yml) can be triggered manually or 
-   automatically after a GitHub release is published.
+You can also set the package name using an environment variable:
+PACKAGE_NAME=my-package py-release/new-release --target=brew --local
 
-   Workflow inputs:
-   - targets: Comma-separated list of targets (pypi,brew,apt,github)
-   - force_update: Force update even if no changes detected
-   - steps: Comma-separated list of steps (build,verify,commit)
-   - package_name: Name of the package (default: project name)
-   - release_notes: Custom release notes content
+2.2 GitHub Workflow
+
+The unified workflow (package-release.yml) can be triggered manually or
+automatically after a GitHub release is published.
+
+Workflow inputs:
+- targets: Comma-separated list of targets (pypi,brew,apt,github)
+- force_update: Force update even if no changes detected
+- steps: Comma-separated list of steps (build,verify,commit)
+- package_name: Name of the package (default: project name)
+- release_notes: Custom release notes content
 
 3. DIRECTORY STRUCTURE
 
@@ -93,7 +88,7 @@ Supports both local execution and GitHub Actions workflows.
 
    To install a generated package manually:
    sudo apt install ./python3-<package_name>_<version>-1_all.deb
-   
+
    Note: When generating a new Debian package, old package directories for
    previous versions are automatically cleaned up to prevent repository clutter.
 
@@ -112,5 +107,12 @@ Supports both local execution and GitHub Actions workflows.
    - Installs dependencies using Homebrew (if available)
    - Installs Python dependencies from requirements.txt
    - Sets up the GitHub workflow file
-   - Removes deprecated workflow files
    - Makes all scripts executable
+
+[deps]
+    - Python 3.7+
+    - Poetry
+    - GitHub CLI (gh)
+    - Jinja2 (for templating)
+    - Twine (for PyPI uploads)
+    - For local APT builds: dpkg-deb, devscripts, debhelper

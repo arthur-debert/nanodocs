@@ -123,7 +123,7 @@ def get_script_path(script_name):
     """Get the absolute path to a script in the repository"""
     repo_root = Path(__file__).parent.parent.parent
     
-    # Map script names to their locations in the package-managers directory
+    # Map script names to their locations in the py-release directory
     script_locations = {
         "pypi-new-release": "common/pypi-new-release",
         "pypi-to-apt": "debian/pypi-to-apt",
@@ -137,7 +137,7 @@ def get_script_path(script_name):
     }
     
     if script_name in script_locations:
-        return repo_root / "package-managers" / script_locations[script_name]
+        return repo_root / "py-release" / script_locations[script_name]
     else:
         # Fallback to bin directory for any scripts not in the mapping
         return repo_root / "bin" / script_name
@@ -253,7 +253,7 @@ def local_apt_commit(package_name, version, force=False):
     has_changes = False
     try:
         result = run_command(
-            ["git", "diff", "--quiet", "package-managers/debian/"], 
+            ["git", "diff", "--quiet", "py-release/debian/"], 
             check=False
         )
         has_changes = result.returncode != 0
@@ -265,7 +265,7 @@ def local_apt_commit(package_name, version, force=False):
         return
     
     # Commit changes
-    run_command(["git", "add", "package-managers/debian/"])
+    run_command(["git", "add", "py-release/debian/"])
     commit_msg = f"Update APT package for {package_name} to version {version}"
     try:
         run_command(["git", "commit", "-m", commit_msg])
@@ -290,7 +290,7 @@ def local_brew_commit(package_name, version, force=False):
     """Commit Homebrew formula changes locally"""
     # Check if there are changes
     has_changes = False
-    formula_path = f"package-managers/brew/Formula/{package_name}.rb"
+    formula_path = f"py-release/brew/Formula/{package_name}.rb"
     try:
         result = run_command(
             ["git", "diff", "--quiet", formula_path], 
