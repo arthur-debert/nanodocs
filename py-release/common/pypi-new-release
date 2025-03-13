@@ -1,0 +1,109 @@
+#!/bin/bash
+# Script to trigger a new PyPI release using GitHub Actions
+
+set -e
+
+# Default values
+RELEASE_NOTES_FILE=""
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --release-notes)
+    RELEASE_NOTES_FILE="$2"
+    shift 2
+    ;;
+  *)
+    # Unknown option
+    shift
+    ;;
+  esac
+done
+
+# Ensure we're in the project root
+cd "$(dirname "$0")/.."
+
+# Check if gh CLI is installed
+if ! command -v gh &>/dev/null; then
+  echo "Error: GitHub CLI (gh) is not installed."
+  echo "Please install it from https://cli.github.com/"
+  exit 1
+fi
+
+# Check if user is authenticated with GitHub
+if ! gh auth status &>/dev/null; then
+  echo "Error: You are not authenticated with GitHub CLI."
+  echo "Please run 'gh auth login' first."
+  exit 1
+fi
+
+# Validate release notes file if provided
+if [[ -n "${RELEASE_NOTES_FILE}" ]]; then
+  if [[ ! -f "${RELEASE_NOTES_FILE}" ]]; then
+    echo "Error: Release notes file '${RELEASE_NOTES_FILE}' does not exist."
+    exit 1
+  fi
+
+  if [[ ! -r "${RELEASE_NOTES_FILE}" ]]; then
+    echo "Error: Release notes file '${RELEASE_NOTES_FILE}' is not readable."
+    exit 1
+  fi
+
+  echo "Using release notes from: ${RELEASE_NOTES_FILE}"
+fi
+
+# Get the current branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ -z ${CURRENT_BRANCH} ]]; then
+  echo "Error: Could not determine current branch."
+  exit 1
+fi
+
+# Get the current version from pyproject.toml
+VERSION=$(poetry version -s)
+if [[ -z ${VERSION} ]]; then
+  echo "Error: Could not determine current version from pyproject.toml."
+  exit 1
+fi
+
+echo "Current version: ${VERSION}"
+echo "Current branch: ${CURRENT_BRANCH}"
+echo "Triggering a PyPI release for version ${VERSION} from branch ${CURRENT_BRANCH}..."
+
+# Prepare workflow inputs
+WORKFLOW_INPUTS=""
+if [[ -n "${RELEASE_NOTES_FILE}" ]]; then
+  # Read the release notes file content and escape it for JSON
+  RELEASE_NOTES_CONTENT=$(cat "${RELEASE_NOTES_FILE}" | jq -Rs .)
+  WORKFLOW_INPUTS="release_notes=${RELEASE_NOTES_CONTENT}"
+fi
+
+# Trigger the workflow
+echo "Triggering PyPI publish workflow..."
+if [[ -n "${WORKFLOW_INPUTS}" ]]; then
+  gh workflow run "Publish to PyPI" --ref "${CURRENT_BRANCH}" --raw-field "${WORKFLOW_INPUTS}"
+else
+  gh workflow run "Publish to PyPI" --ref "${CURRENT_BRANCH}"
+fi
+echo ""
+
+# Wait a moment for the workflow to be registered
+echo "Waiting for workflow to start..."
+sleep 2
+
+# Get the run ID of the latest workflow
+RUN_ID=$(gh run list --workflow="Publish to PyPI" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+# Display the status of the workflow run
+echo "Latest workflow run status:"
+echo ""
+gh run list --workflow="Publish to PyPI" --limit 1
+
+if [[ -n ${RUN_ID} ]]; then
+  echo ""
+  echo "You can check the detailed status with:"
+  echo "gh run view ${RUN_ID}"
+  echo ""
+  echo "Watching workflow progress in real-time..."
+  gh run watch "${RUN_ID}"
+fi

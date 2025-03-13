@@ -1,0 +1,90 @@
+#!/bin/bash
+# Setup script for py-release
+# This script creates the necessary directory structure and configures the environment
+# when the py-release directory is copied to a new repository.
+
+set -e
+
+# Get the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# SCRIPT_DIR is now the py-release directory
+PY_RELEASE_DIR="$SCRIPT_DIR"
+# Get the repository root (parent of py-release)
+REPO_ROOT="$(cd "$PY_RELEASE_DIR/.." && pwd)"
+
+echo "Setting up py-release in $REPO_ROOT..."
+
+# Create necessary directories
+echo "Creating necessary directories..."
+mkdir -p "$REPO_ROOT/.github/workflows"
+mkdir -p "$PY_RELEASE_DIR/brew/Formula"
+mkdir -p "$PY_RELEASE_DIR/debian"
+
+# Install dependencies if Homebrew is available
+if command -v brew &>/dev/null; then
+  echo "Installing dependencies using Homebrew..."
+  brew bundle --file="$SCRIPT_DIR/Brewfile"
+else
+  echo "Homebrew not found. Please install the following dependencies manually:"
+  echo "- GitHub CLI (gh)"
+  echo "- Python"
+  echo "- Poetry"
+fi
+
+# Install Python dependencies
+echo "Installing Python dependencies..."
+if command -v pip &>/dev/null; then
+  pip install -r "$SCRIPT_DIR/requirements.txt"
+else
+  echo "Warning: pip not found. Please install the following Python dependencies manually:"
+  cat "$SCRIPT_DIR/requirements.txt"
+fi
+
+# Handle the GitHub workflow file
+echo "Setting up GitHub workflow..."
+
+# Define the workflow paths
+WORKFLOW_TEMPLATE="$SCRIPT_DIR/package-release.yml"
+WORKFLOW_DESTINATION="$REPO_ROOT/.github/workflows/package-release.yml"
+
+# Copy the workflow file to the GitHub workflows directory
+if [ -f "$WORKFLOW_TEMPLATE" ]; then
+  echo "Installing workflow file to .github/workflows/..."
+  cp "$WORKFLOW_TEMPLATE" "$WORKFLOW_DESTINATION"
+else
+  echo "Error: Could not find package-release.yml template."
+  echo "Please ensure the file exists at: $WORKFLOW_TEMPLATE"
+  exit 1
+fi
+
+# Remove old workflow files that are now replaced by the unified workflow
+echo "Removing deprecated workflow files..."
+OLD_WORKFLOWS=(
+  "$REPO_ROOT/.github/workflows/update-homebrew-formula.yml"
+  "$REPO_ROOT/.github/workflows/update-apt-package.yml"
+  "$REPO_ROOT/.github/workflows/pypi-publish.yml"
+)
+
+for workflow in "${OLD_WORKFLOWS[@]}"; do
+  if [ -f "$workflow" ]; then
+    echo "Removing $workflow..."
+    rm "$workflow"
+  fi
+done
+
+# Make all scripts executable
+echo "Making scripts executable..."
+find "$PY_RELEASE_DIR" -type f \( -name "*.py" -o -name "*.sh" \) -print0 | xargs -0 chmod +x
+chmod +x "$PY_RELEASE_DIR/new-release"
+
+# Create setup flag file
+touch "$REPO_ROOT/.py-release-setup"
+
+echo "Setup complete!"
+echo ""
+echo "To use py-release:"
+echo "1. Run 'py-release/new-release --help' to see available options"
+echo "2. For local builds: 'py-release/new-release --local --publish-to=brew,apt'"
+echo "3. For GitHub Actions: 'py-release/new-release --publish-to=pypi,brew,apt'"
+echo ""
+echo "The GitHub workflow is available at: $WORKFLOW_DESTINATION"

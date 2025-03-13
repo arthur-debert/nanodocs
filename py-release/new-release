@@ -1,0 +1,22 @@
+#!/bin/bash
+# Wrapper script for common/new-release.py
+
+# Get the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# SCRIPT_DIR is now the py-release directory
+PY_RELEASE_DIR="$SCRIPT_DIR"
+# Get the repository root (parent of py-release)
+REPO_ROOT="$(cd "$PY_RELEASE_DIR/.." && pwd)"
+
+# Check if setup has been run
+if [ ! -f "$REPO_ROOT/.py-release-setup" ]; then
+    echo "Error: py-release has not been set up in this repository."
+    echo "Please run 'py-release/setup' first."
+    exit 1
+fi
+
+# Make the Python script executable
+chmod +x "$PY_RELEASE_DIR/common/new-release.py"
+
+# Execute the actual script with all arguments passed through
+"$PY_RELEASE_DIR/common/new-release.py" "$@"

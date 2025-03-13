@@ -1,0 +1,40 @@
+#!/bin/bash
+# Script to trigger an APT package update using GitHub Actions
+
+# Default values
+STEPS="build,verify,commit"
+FORCE_UPDATE=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --steps)
+    STEPS="$2"
+    shift 2
+    ;;
+  --force)
+    FORCE_UPDATE=true
+    shift
+    ;;
+  *)
+    # Unknown option
+    shift
+    ;;
+  esac
+done
+
+# Get the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get the package-managers directory (parent of debian)
+PACKAGE_MANAGERS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Get the repository root (parent of package-managers)
+REPO_ROOT="$(cd "$PACKAGE_MANAGERS_DIR/.." && pwd)"
+
+# Execute the common trigger-workflow script with APT-specific parameters
+"$PACKAGE_MANAGERS_DIR/common/trigger-workflow" \
+  --workflow-name "Update APT Package" \
+  --workflow-file ".github/workflows/update-apt-package.yml" \
+  --package-name "nanodoc" \
+  --description "an APT package update" \
+  --field "steps=$STEPS" \
+  --field "force_update=$FORCE_UPDATE"
