@@ -213,6 +213,7 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Generate a Homebrew formula for a PyPI package")
     parser.add_argument("package_name", help="The name of the PyPI package")
+    parser.add_argument("--output-dir", help="Directory to save the formula to (default: Formula directory)")
     args = parser.parse_args()
 
     package_name = args.package_name
@@ -244,6 +245,24 @@ def main():
 
         # Output the formula
         print(formula)
+
+        # Save the formula to a file
+        if args.output_dir:
+            output_dir = args.output_dir
+        else:
+            # Default to the Formula directory in the same directory as this script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            output_dir = os.path.join(script_dir, "Formula")
+        
+        # Create the output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save the formula to a file
+        formula_path = os.path.join(output_dir, f"{package_name}.rb")
+        with open(formula_path, "w") as f:
+            f.write(formula)
+        
+        print(f"Formula saved to {formula_path}")
 
     finally:
         # Clean up the temporary directory
