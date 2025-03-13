@@ -23,7 +23,7 @@ import sys
 import tempfile
 import urllib.request
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import jinja2
 
@@ -180,12 +180,36 @@ def format_date() -> str:
         locale.setlocale(locale.LC_TIME, old_locale)
 
 
+def clean_old_package_dirs(output_dir: str, package_name: str, current_version: str) -> None:
+    """
+    Clean up old package directories for the same package.
+    Keeps the current version and removes all others.
+    """
+    # Find all directories matching the package name pattern
+    package_dirs = []
+    pattern = re.compile(f"^{re.escape(package_name)}-[0-9.]+$")
+    
+    for item in os.listdir(output_dir):
+        if pattern.match(item) and os.path.isdir(os.path.join(output_dir, item)):
+            if item != f"{package_name}-{current_version}":  # Skip current version
+                package_dirs.append(item)
+    
+    # Remove old package directories
+    for old_dir in package_dirs:
+        old_dir_path = os.path.join(output_dir, old_dir)
+        print(f"Removing old package directory: {old_dir}")
+        shutil.rmtree(old_dir_path)
+
+
 def build_debian_package(output_dir: str, metadata: Dict[str, str], venv_path: str) -> str:
     """Build a Debian package from the installed package."""
     package_name = metadata["name"]
     version = metadata["version"]
+    
+    # Clean up old package directories
+    clean_old_package_dirs(output_dir, package_name, version)
 
-    # Clean up any existing package directory
+    # Clean up any existing package directory for current version
     package_dir = os.path.join(output_dir, f"{package_name}-{version}")
     if os.path.exists(package_dir):
         shutil.rmtree(package_dir)
