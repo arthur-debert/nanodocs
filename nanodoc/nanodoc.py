@@ -98,25 +98,12 @@ nanodoc  bundle_file                        # bundle_file is a txt document with
 """
 import argparse
 import logging
-import os
 import sys
 
-# Import necessary functions from the core module
-# Handle both package and direct execution
-try:
-    # Try relative imports first (when used as a package)
-    from .core import process_all
-    from .files import get_files_from_args, TXT_EXTENSIONS
-except ImportError:
-    # Fall back to absolute imports (when run as a script)
-    # Add parent directory to path to make nanodoc a package
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    from nanodoc.core import process_all
-    from nanodoc.files import get_files_from_args, TXT_EXTENSIONS
+from nanodoc.core import process_all
+from nanodoc.files import get_files_from_args, TXT_EXTENSIONS
+from nanodoc.version import VERSION
 
-
-# Version and configuration constants
-VERSION = "0.1.0"
 LINE_WIDTH = 80
 
 

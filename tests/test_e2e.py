@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 from nanodoc.formatting import create_header
 
@@ -13,8 +14,9 @@ SAMPLE_FILES = [
     os.path.join(MODULE_DIR, "samples", "new-telephone.txt"),
 ]
 
-# Path to the nanodoc script
-NANODOC_SCRIPT = os.path.join(MODULE_DIR, "nanodoc", "nanodoc.py")
+# Use Python module approach instead of direct script execution
+PYTHON_CMD = sys.executable
+NANODOC_MODULE = "nanodoc"
 
 
 def test_e2e_with_nn_and_toc():
@@ -28,7 +30,7 @@ def test_e2e_with_nn_and_toc():
 
     # Run nanodoc with -nn and --toc options on the sample files
     result = subprocess.run(
-        ["python", NANODOC_SCRIPT, "-nn", "--toc"] + SAMPLE_FILES,
+        [PYTHON_CMD, "-m", NANODOC_MODULE, "-nn", "--toc"] + SAMPLE_FILES,
         capture_output=True,
         text=True,
     )
@@ -119,7 +121,7 @@ def test_e2e_bundle_with_nn_and_toc(tmpdir):
 
     # Run nanodoc with bundle file, -nn and --toc options
     result = subprocess.run(
-        ["python", NANODOC_SCRIPT, "-nn", "--toc", str(bundle_file)],
+        [PYTHON_CMD, "-m", NANODOC_MODULE, "-nn", "--toc", str(bundle_file)],
         capture_output=True,
         text=True,
     )
