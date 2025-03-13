@@ -89,6 +89,9 @@ Supports both local execution and GitHub Actions workflows.
 
    To install a generated package manually:
    sudo apt install ./python3-<package_name>_<version>-1_all.deb
+   
+   Note: When generating a new Debian package, old package directories for
+   previous versions are automatically cleaned up to prevent repository clutter.
 
    4.2 Homebrew Formulas
 
