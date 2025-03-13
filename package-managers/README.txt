@@ -36,11 +36,17 @@ Supports both local execution and GitHub Actions workflows.
    --commit                Only commit package manager manifests
    --force                 Force update even if no changes detected
    --version=<version>     Specify version (default: from pyproject.toml)
+   --package-name=<name>   Specify package name (default: from pyproject.toml
+                           or PACKAGE_NAME environment variable)
 
    Examples:
    bin/new-release --target=brew --target=apt --local
    bin/new-release --target=pypi --target=github
    bin/new-release --target=github --local
+   bin/new-release --target=brew --package-name=mypackage --local
+
+   You can also set the package name using an environment variable:
+   PACKAGE_NAME=mypackage bin/new-release --target=brew --local
 
    2.2 GitHub Workflow
 
