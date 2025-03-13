@@ -29,7 +29,7 @@ Supports both local execution and GitHub Actions workflows.
 
    Options:
    --target=<target>       Specify a target to publish to (can be used multiple times)
-                           Valid targets: pypi, apt, brew
+                           Valid targets: pypi, apt, brew, github
    --local                 Run locally instead of using GitHub Actions
    --build                 Only build package manager manifests
    --verify                Only verify/test package manager manifests
@@ -39,7 +39,8 @@ Supports both local execution and GitHub Actions workflows.
 
    Examples:
    bin/new-release --target=brew --target=apt --local
-   bin/new-release --target=pypi
+   bin/new-release --target=pypi --target=github
+   bin/new-release --target=github --local
 
    2.2 GitHub Workflow
 
@@ -47,7 +48,7 @@ Supports both local execution and GitHub Actions workflows.
    automatically after a GitHub release is published.
 
    Workflow inputs:
-   - targets: Comma-separated list of targets (pypi,brew,apt)
+   - targets: Comma-separated list of targets (pypi,brew,apt,github)
    - force_update: Force update even if no changes detected
    - steps: Comma-separated list of steps (build,verify,commit)
    - package_name: Name of the package (default: project name)

@@ -8,10 +8,10 @@ on:
   workflow_dispatch:
     inputs:
       targets:
-        description: "Comma-separated list of targets (pypi,brew,apt)"
+        description: "Comma-separated list of targets (pypi,brew,apt,github)"
         required: false
         type: string
-        default: "pypi,brew,apt"
+        default: "pypi,brew,apt,github"
       force_update:
         description: "Force update even if no changes detected"
         required: false
@@ -41,6 +41,7 @@ jobs:
       publish_pypi: ${{ steps.set_targets.outputs.publish_pypi }}
       publish_brew: ${{ steps.set_targets.outputs.publish_brew }}
       publish_apt: ${{ steps.set_targets.outputs.publish_apt }}
+      publish_github: ${{ steps.set_targets.outputs.publish_github }}
       version: ${{ steps.determine_version.outputs.release_version }}
       package_name: ${{ steps.determine_package.outputs.package_name }}
     steps:
@@ -84,13 +85,14 @@ jobs:
             echo "publish_pypi=true" >> $GITHUB_OUTPUT
             echo "publish_brew=true" >> $GITHUB_OUTPUT
             echo "publish_apt=true" >> $GITHUB_OUTPUT
+            echo "publish_github=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           # Parse input targets
           TARGETS="${{ github.event.inputs.targets }}"
           if [[ -z "$TARGETS" ]]; then
-            TARGETS="pypi,brew,apt"
+            TARGETS="pypi,brew,apt,github"
           fi
 
           # Set individual target flags
@@ -110,6 +112,12 @@ jobs:
             echo "publish_apt=true" >> $GITHUB_OUTPUT
           else
             echo "publish_apt=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ "$TARGETS" == *"github"* ]]; then
+            echo "publish_github=true" >> $GITHUB_OUTPUT
+          else
+            echo "publish_github=false" >> $GITHUB_OUTPUT
           fi
 
   pypi_publish:
@@ -344,3 +352,40 @@ jobs:
               echo "No changes to APT package, skipping commit"
             fi
           fi
+
+  # Add a dedicated job for GitHub releases
+  github_release:
+    needs: [determine_targets, pypi_publish]
+    if: ${{ needs.determine_targets.outputs.publish_github == 'true' && (always() || needs.pypi_publish.result == 'success' || needs.pypi_publish.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT || github.token }}
+
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-python-poetry
+        with:
+          python-version: "3.11"
+          cache-key-prefix: "github-env"
+
+      - name: Build package
+        shell: bash
+        run: |
+          # Only build if we don't have a PyPI job or it was skipped
+          if [[ "${{ needs.pypi_publish.result }}" != "success" ]]; then
+            poetry build
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          tag_name: v${{ needs.determine_targets.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: ${{ inputs.release_notes == '' }}
+          body: ${{ inputs.release_notes }}
+          prerelease: false
+          name: "Release v${{ needs.determine_targets.outputs.version }}"

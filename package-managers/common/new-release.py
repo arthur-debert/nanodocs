@@ -13,7 +13,7 @@ Usage:
 Options:
     --target=<target>       Specify a target to publish to 
                             (can be used multiple times)
-                            Valid targets: pypi, apt, brew
+                            Valid targets: pypi, apt, brew, github
     --local                 Run everything locally instead of using 
                             GitHub Actions
     --build                 Only build package manager manifests
@@ -43,7 +43,7 @@ def parse_args():
         "--target", 
         action="append",
         dest="targets",
-        choices=["pypi", "apt", "brew"],
+        choices=["pypi", "apt", "brew", "github"],
         help="Target to publish to (can be used multiple times)"
     )
     
@@ -338,6 +338,62 @@ def workflow_brew_update(package_name, steps=None, force=False):
         print("Continuing with the release process...")
 
 
+def create_github_release(version, release_notes_file=None):
+    """Create a GitHub release locally"""
+    if not shutil.which("gh"):
+        print("GitHub CLI not found. Please install it to create GitHub releases.")
+        print("See: https://cli.github.com/")
+        return
+    
+    tag_name = f"v{version}"
+    release_cmd = [
+        "gh", "release", "create", tag_name, 
+        "--title", f"Release {tag_name}"
+    ]
+    
+    # Add release notes if provided
+    if release_notes_file:
+        with open(release_notes_file, 'r') as f:
+            notes = f.read()
+        release_cmd.extend(["--notes", notes])
+    else:
+        release_cmd.append("--generate-notes")
+    
+    # Add distribution files if they exist
+    dist_path = Path("dist")
+    if dist_path.exists():
+        dist_files = list(dist_path.glob("*"))
+        for file in dist_files:
+            release_cmd.append(str(file))
+    
+    try:
+        run_command(release_cmd, capture_output=False)
+        print(f"✅ GitHub release {tag_name} created successfully!")
+    except subprocess.CalledProcessError as e:
+        print(f"Warning: Failed to create GitHub release: {e}")
+        print("You can create it manually with:")
+        print(f"  gh release create {tag_name} --title 'Release {tag_name}'")
+
+
+def workflow_github_release(version, release_notes_file=None):
+    """Trigger GitHub release workflow"""
+    cmd = [str(get_script_path("trigger-workflow"))]
+    
+    if release_notes_file:
+        cmd.extend(["--field", f"release_notes={release_notes_file}"])
+    
+    # Use the unified workflow
+    cmd.extend(["--workflow", "Package Release", "--field", "targets=github"])
+    
+    try:
+        run_command(cmd, capture_output=False)
+        print("GitHub release workflow triggered successfully!")
+    except subprocess.CalledProcessError as e:
+        print("Warning: GitHub release workflow trigger failed:")
+        print(f"  {e}")
+        print("Continuing with the release process...")
+
+
 def main():
     args = parse_args()
     
@@ -370,6 +426,15 @@ def main():
     
     # Default package name
     package_name = "nanodoc"  # This could be made configurable
+    
+    # Process GitHub release if requested
+    if "github" in targets:
+        if args.local:
+            # Create GitHub release locally
+            create_github_release(version, args.release_notes)
+        else:
+            # Trigger GitHub workflow for GitHub release
+            workflow_github_release(version, args.release_notes)
     
     # Process PyPI release if requested
     if "pypi" in targets:
