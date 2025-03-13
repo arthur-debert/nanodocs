@@ -490,7 +490,9 @@ def file_sort_key(path):
     base_name = os.path.splitext(os.path.basename(path))[0]
     ext = os.path.splitext(path)[1]
     # This ensures test_file.txt comes before test_file.md
-    ext_priority = 0 if ext == TXT_EXTENSIONS[0] else 1 if ext == TXT_EXTENSIONS[1] else 2
+    ext_priority = (
+        0 if ext == TXT_EXTENSIONS[0] else 1 if ext == TXT_EXTENSIONS[1] else 2
+    )
     return (base_name, ext_priority)
 
 
