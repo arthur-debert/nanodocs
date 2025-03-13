@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: "nanodoc"
+      steps:
+        description: "Steps to run (comma-separated: build,verify,commit)"
+        required: false
+        type: string
+        default: "build,verify,commit"
 
 permissions:
   contents: write
@@ -35,8 +40,7 @@ jobs:
   update-apt-package:
     runs-on: ubuntu-latest
     # Only run if triggered by workflow_run and that workflow was successful
-    if:
-      ${{ github.event_name != 'workflow_run' ||
+    if: ${{ github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout code
@@ -62,7 +66,34 @@ jobs:
           version=$(poetry version -s)
           echo "version=$version" >> $GITHUB_OUTPUT
 
+      - name: Parse steps
+        id: parse_steps
+        shell: bash
+        run: |
+          # Default to all steps if not specified
+          STEPS="${{ github.event.inputs.steps || 'build,verify,commit' }}"
+
+          # Check if each step is included
+          if [[ $STEPS == *"build"* ]]; then
+            echo "run_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_build=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ $STEPS == *"verify"* ]]; then
+            echo "run_verify=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_verify=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ $STEPS == *"commit"* ]]; then
+            echo "run_commit=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_commit=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install dependencies
+        if: steps.parse_steps.outputs.run_build == 'true'
         shell: bash
         run: |
           # Install required packages for building Debian packages
@@ -73,6 +104,7 @@ jobs:
           pip install jinja2
 
       - name: Generate APT package
+        if: steps.parse_steps.outputs.run_build == 'true'
         id: generate_package
         shell: bash
         run: |
@@ -90,9 +122,10 @@ jobs:
           git pull origin ${GITHUB_REF##*/}
 
           # Run the update script
-          package-managers/debian/update-apt-package.sh "$PACKAGE_NAME"
+          package-managers/debian/pypi-to-apt "$PACKAGE_NAME"
 
       - name: Test APT package
+        if: steps.parse_steps.outputs.run_verify == 'true' && steps.parse_steps.outputs.run_build == 'true'
         shell: bash
         run: |
           # Get package name from previous step
@@ -113,10 +146,11 @@ jobs:
           echo "✅ Package tests completed successfully. Proceeding with commit."
 
       - name: Commit and push changes
+        if: steps.parse_steps.outputs.run_commit == 'true'
         shell: bash
         run: |
-          # Get package name from previous step
-          PACKAGE_NAME="${{ steps.generate_package.outputs.package_name }}"
+          # Get package name from previous step or input
+          PACKAGE_NAME="${{ steps.generate_package.outputs.package_name || github.event.inputs.package_name || 'nanodoc' }}"
           echo "Using package name: $PACKAGE_NAME"
 
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
