@@ -1,0 +1,24 @@
+#!/bin/bash
+# Script to update both Homebrew and APT packages in non-interactive mode
+
+set -e
+
+# Get the directory of the current script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Check if force update is requested
+FORCE_FLAG=""
+if [[ "$1" == "--force" ]]; then
+    FORCE_FLAG="--force"
+fi
+
+echo "Updating Homebrew package..."
+"$PROJECT_ROOT/package-managers/common/package-update" --non-interactive brew $FORCE_FLAG
+
+echo ""
+echo "Updating APT package..."
+"$PROJECT_ROOT/package-managers/common/package-update" --non-interactive apt $FORCE_FLAG
+
+echo ""
+echo "Both package updates have been triggered."
