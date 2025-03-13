@@ -1,48 +1,47 @@
-RELEASES
+PACKAGE MANAGERS
 
-This is a drop in app that can do:
+A drop-in solution for managing Python package releases across multiple platforms:
+- PyPI releases
+- GitHub releases
+- APT packages
+- Homebrew formulas
 
-- Releases to pypi
-- Releases to github
-- Create apt packages from the pypi release
-- Create brew packages from the pypi release
+Supports both local execution and GitHub Actions workflows.
 
-And can be ran both locally and remotely via GitHub Actions.
+1. INSTALLATION
 
-1. Installation
+   1.1 Copy the package-managers directory to your project root
+   1.2 Run the setup script:
+       ./package-managers/repo-install/setup.sh
+   1.3 Dependencies:
+       - Python 3.7+
+       - Poetry
+       - GitHub CLI (gh)
+       - For local APT builds: dpkg-deb, devscripts, debhelper
 
-    1.1 Copy the content of this dir to your project root
-    1.2 run the install (to be done: lets install bia brew + script
+2. USAGE
 
-2. Running
+   2.1 The new-release command
 
-The program to run is the new-release.sh script.
+   bin/new-release [options]
 
-2.1 The new-release.sh script
+   Options:
+   --publish-to=<targets>  Comma-separated list of targets (pypi,brew,apt)
+   --local                 Run locally instead of using GitHub Actions
+   --build                 Only build package manager manifests
+   --verify                Only verify/test package manager manifests
+   --commit                Only commit package manager manifests
+   --force                 Force update even if no changes detected
+   --version=<version>     Specify version (default: from pyproject.toml)
 
-Execution can be customized :
+   2.2 GitHub Workflow
 
-- Target:
-    - default: all (pypi, brew, apt)
-    - --publish-to pypi|brew|apt - if one is specified, only that target will be used
-- Enviroment:
-    - default: github actions
-    - --local , defaults to false
-- Steps:
-    - default: all (build, verify and commit)
-    - --build or --verify (includes build and verify)
+   The unified workflow (package-release.yml) can be triggered manually or 
+   automatically after a GitHub release is published.
 
-2.2 The github workflow
-
-
-Execution can be customized :
-
-The workflow is package-release.yml
-It  can only run remotely, on github actions, and does the full steps.
-
-One can customize where to publish to :
-
-The publish-to option can be used to specify where to publish the release to. It can be one of the following:
-- pypi
-- brew
-- apt
+   Workflow inputs:
+   - publish_to: Comma-separated list of targets (pypi,brew,apt)
+   - force_update: Force update even if no changes detected
+   - steps: Comma-separated list of steps (build,verify,commit)
+   - package_name: Name of the package (default: project name)
+   - release_notes: Custom release notes content
