@@ -68,13 +68,7 @@ fi
 
 echo "Current version: ${VERSION}"
 echo "Current branch: ${CURRENT_BRANCH}"
-echo "This will trigger a PyPI release for version ${VERSION} from branch ${CURRENT_BRANCH}."
-read -r -p "Continue? (y/n): " CONFIRM
-
-if [[ ${CONFIRM} != "y" && ${CONFIRM} != "Y" ]]; then
-  echo "Release cancelled."
-  exit 0
-fi
+echo "Triggering a PyPI release for version ${VERSION} from branch ${CURRENT_BRANCH}..."
 
 # Prepare workflow inputs
 WORKFLOW_INPUTS=""
@@ -110,12 +104,6 @@ if [[ -n ${RUN_ID} ]]; then
   echo "You can check the detailed status with:"
   echo "gh run view ${RUN_ID}"
   echo ""
-  echo "To watch the workflow progress in real-time:"
-  echo "gh run watch ${RUN_ID}"
-
-  # Ask if the user wants to watch the workflow
-  read -r -p "Do you want to watch the workflow progress? (y/n): " WATCH
-  if [[ ${WATCH} == "y" || ${WATCH} == "Y" ]]; then
-    gh run watch "${RUN_ID}"
-  fi
+  echo "Watching workflow progress in real-time..."
+  gh run watch "${RUN_ID}"
 fi

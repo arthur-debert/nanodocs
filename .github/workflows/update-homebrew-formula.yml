@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: "nanodoc"
+      steps:
+        description: "Steps to run (comma-separated: build,verify,commit)"
+        required: false
+        type: string
+        default: "build,verify,commit"
 
 permissions:
   contents: write
@@ -35,8 +40,7 @@ jobs:
   update-formula:
     runs-on: ubuntu-latest
     # Only run if triggered by workflow_run and that workflow was successful
-    if:
-      ${{ github.event_name != 'workflow_run' ||
+    if: ${{ github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout code
@@ -62,7 +66,34 @@ jobs:
           version=$(poetry version -s)
           echo "version=$version" >> $GITHUB_OUTPUT
 
+      - name: Parse steps
+        id: parse_steps
+        shell: bash
+        run: |
+          # Default to all steps if not specified
+          STEPS="${{ github.event.inputs.steps || 'build,verify,commit' }}"
+
+          # Check if each step is included
+          if [[ $STEPS == *"build"* ]]; then
+            echo "run_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_build=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ $STEPS == *"verify"* ]]; then
+            echo "run_verify=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_verify=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ $STEPS == *"commit"* ]]; then
+            echo "run_commit=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_commit=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Generate Homebrew formula
+        if: steps.parse_steps.outputs.run_build == 'true'
         id: generate_formula
         shell: bash
         run: |
@@ -76,12 +107,12 @@ jobs:
 
           # Make scripts executable
           chmod +x package-managers/brew/pypi-to-brew
-          chmod +x package-managers/brew/update-brew-formula.sh
 
           # Run the update script
-          package-managers/brew/update-brew-formula.sh "$PACKAGE_NAME"
+          package-managers/brew/pypi-to-brew "$PACKAGE_NAME"
 
       - name: Test Homebrew formula
+        if: steps.parse_steps.outputs.run_verify == 'true' && steps.parse_steps.outputs.run_build == 'true'
         shell: bash
         run: |
           # Get package name from previous step
@@ -102,10 +133,11 @@ jobs:
           echo "✅ Formula tests completed successfully. Proceeding with commit."
 
       - name: Commit and push changes
+        if: steps.parse_steps.outputs.run_commit == 'true'
         shell: bash
         run: |
-          # Get package name from previous step
-          PACKAGE_NAME="${{ steps.generate_formula.outputs.package_name }}"
+          # Get package name from previous step or input
+          PACKAGE_NAME="${{ steps.generate_formula.outputs.package_name || github.event.inputs.package_name || 'nanodoc' }}"
           echo "Using package name: $PACKAGE_NAME"
 
           git config --local user.email "github-actions[bot]@users.noreply.github.com"

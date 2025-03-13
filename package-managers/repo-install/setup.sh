@@ -1,7 +1,7 @@
 #!/bin/bash
 # Setup script for package-managers
-# This script creates the necessary symlinks and setup when the package-managers
-# directory is copied to a new repository.
+# This script creates the necessary directory structure, symlinks, and scripts
+# when the package-managers directory is copied to a new repository.
 
 set -e
 
@@ -14,98 +14,55 @@ REPO_ROOT="$(cd "$PACKAGE_MANAGERS_DIR/.." && pwd)"
 
 echo "Setting up package-managers in $REPO_ROOT..."
 
-# Create Formula symlink
-echo "Creating Formula symlink..."
-ln -sf "$PACKAGE_MANAGERS_DIR/brew/Formula" "$REPO_ROOT/Formula"
-
-# Create bin directory and wrapper scripts
-echo "Creating bin directory and wrapper scripts..."
+# Create necessary directories
+echo "Creating necessary directories..."
 mkdir -p "$REPO_ROOT/bin"
+mkdir -p "$REPO_ROOT/.github/workflows"
+mkdir -p "$PACKAGE_MANAGERS_DIR/brew/Formula"
+mkdir -p "$PACKAGE_MANAGERS_DIR/debian"
 
-# Create wrapper scripts for brew-related scripts
-for script in brew-update pypi-to-brew test-brew-formula.sh update-brew-formula.sh; do
-  echo "Creating wrapper for $script..."
-  cat >"$REPO_ROOT/bin/$script" <<EOF
-#!/bin/bash
-# Wrapper script for package-managers/brew/$script
-
-# Get the directory of the current script
-SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="\$(cd "\$SCRIPT_DIR/.." && pwd)"
-
-# Execute the actual script with all arguments passed through
-"\$PROJECT_ROOT/package-managers/brew/$script" "\$@"
-EOF
-  chmod +x "$REPO_ROOT/bin/$script"
-done
-
-# Create wrapper scripts for debian-related scripts
-for script in apt-update docker-apt-build pypi-to-apt setup-apt-repo.sh update-apt-package.sh test-apt-package.sh; do
-  echo "Creating wrapper for $script..."
-  cat >"$REPO_ROOT/bin/$script" <<EOF
-#!/bin/bash
-# Wrapper script for package-managers/debian/$script
-
-# Get the directory of the current script
-SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="\$(cd "\$SCRIPT_DIR/.." && pwd)"
-
-# Execute the actual script with all arguments passed through
-"\$PROJECT_ROOT/package-managers/debian/$script" "\$@"
-EOF
-  chmod +x "$REPO_ROOT/bin/$script"
-done
-
-# Create wrapper scripts for common scripts
-for script in about-py-package package-update pypi-new-release trigger-workflow; do
-  echo "Creating wrapper for $script..."
-  cat >"$REPO_ROOT/bin/$script" <<EOF
-#!/bin/bash
-# Wrapper script for package-managers/common/$script
-
-# Get the directory of the current script
-SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="\$(cd "\$SCRIPT_DIR/.." && pwd)"
-
-# Execute the actual script with all arguments passed through
-"\$PROJECT_ROOT/package-managers/common/$script" "\$@"
-EOF
-  chmod +x "$REPO_ROOT/bin/$script"
-done
-
-# Copy LICENSE to bin directory
-echo "Copying LICENSE to bin directory..."
-cp "$PACKAGE_MANAGERS_DIR/common/LICENSE" "$REPO_ROOT/bin/LICENSE"
-
-# Update GitHub workflow files if they exist
-GITHUB_DIR="$REPO_ROOT/.github"
-if [ -d "$GITHUB_DIR" ]; then
-  echo "Updating GitHub workflow files..."
-
-  # Update update-apt-package.yml
-  APT_WORKFLOW="$GITHUB_DIR/workflows/update-apt-package.yml"
-  if [ -f "$APT_WORKFLOW" ]; then
-    echo "Updating $APT_WORKFLOW..."
-    sed -i.bak 's|bin/pypi-to-apt|package-managers/debian/pypi-to-apt|g' "$APT_WORKFLOW"
-    sed -i.bak 's|bin/about-py-package|package-managers/common/about-py-package|g' "$APT_WORKFLOW"
-    sed -i.bak 's|bin/update-apt-package.sh|package-managers/debian/update-apt-package.sh|g' "$APT_WORKFLOW"
-    sed -i.bak 's|./Debian/|./package-managers/debian/|g' "$APT_WORKFLOW"
-    sed -i.bak 's|git add Debian/|git add package-managers/debian/|g' "$APT_WORKFLOW"
-    rm -f "$APT_WORKFLOW.bak"
-  fi
-
-  # Update update-homebrew-formula.yml
-  BREW_WORKFLOW="$GITHUB_DIR/workflows/update-homebrew-formula.yml"
-  if [ -f "$BREW_WORKFLOW" ]; then
-    echo "Updating $BREW_WORKFLOW..."
-    sed -i.bak 's|bin/pypi-to-brew|package-managers/brew/pypi-to-brew|g' "$BREW_WORKFLOW"
-    sed -i.bak 's|bin/update-brew-formula.sh|package-managers/brew/update-brew-formula.sh|g' "$BREW_WORKFLOW"
-    sed -i.bak 's|Formula/|package-managers/brew/Formula/|g' "$BREW_WORKFLOW"
-    sed -i.bak 's|git add Formula/|git add package-managers/brew/Formula/|g' "$BREW_WORKFLOW"
-    rm -f "$BREW_WORKFLOW.bak"
-  fi
+# Install dependencies if Homebrew is available
+if command -v brew &>/dev/null; then
+  echo "Installing dependencies using Homebrew..."
+  brew bundle --file="$SCRIPT_DIR/Brewfile"
+else
+  echo "Homebrew not found. Please install the following dependencies manually:"
+  echo "- GitHub CLI (gh)"
+  echo "- Python"
+  echo "- Poetry"
 fi
 
+# Create the new-release script in bin
+echo "Creating bin/new-release script..."
+cp "$SCRIPT_DIR/new-release" "$REPO_ROOT/bin/new-release"
+chmod +x "$REPO_ROOT/bin/new-release"
+
+# Handle the GitHub workflow file
+echo "Setting up GitHub workflow..."
+
+# Define the workflow paths
+WORKFLOW_TEMPLATE="$SCRIPT_DIR/package-release.yml"
+WORKFLOW_DESTINATION="$REPO_ROOT/.github/workflows/package-release.yml"
+
+# Copy the workflow file to the GitHub workflows directory
+if [ -f "$WORKFLOW_TEMPLATE" ]; then
+  echo "Installing workflow file to .github/workflows/..."
+  cp "$WORKFLOW_TEMPLATE" "$WORKFLOW_DESTINATION"
+else
+  echo "Error: Could not find package-release.yml template."
+  echo "Please ensure the file exists at: $WORKFLOW_TEMPLATE"
+  exit 1
+fi
+
+# Make all scripts executable
+echo "Making scripts executable..."
+find "$PACKAGE_MANAGERS_DIR" -type f \( -name "*.py" -o -name "*.sh" \) -print0 | xargs -0 chmod +x
+
 echo "Setup complete!"
-echo "You can now remove the original Debian and debian-build directories if they exist,"
-echo "as their contents have been moved to package-managers/debian/."
+echo ""
+echo "To use the package manager system:"
+echo "1. Run 'bin/new-release --help' to see available options"
+echo "2. For local builds: 'bin/new-release --local --publish-to=brew,apt'"
+echo "3. For GitHub Actions: 'bin/new-release --publish-to=pypi,brew,apt'"
+echo ""
+echo "The GitHub workflow is available at: $WORKFLOW_DESTINATION"
