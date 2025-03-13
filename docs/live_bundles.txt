@@ -48,6 +48,35 @@ Conclusion
 Each line that contains only a valid file path will be replaced with the content
 of that file. All other lines will be preserved as-is.
 
+Inline File Inclusion
+-------------------
+
+Live bundles also support inline file inclusion using the @[file path] syntax:
+
+```
+This paragraph includes @[/path/to/quote.txt] right in the middle of the text.
+```
+
+With this syntax, the file content is inserted inline with all line breaks removed.
+This is useful for including short snippets of text within a paragraph without
+disrupting the flow of the document.
+
+For example, if quote.txt contains:
+```
+To be or not to be
+That is the question
+```
+
+The result will be:
+```
+This paragraph includes To be or not to be That is the question right in the middle of the text.
+```
+
+You can include multiple inline file references in a single line:
+```
+As @[author.txt] once said: "@[quote.txt]"
+```
+
 Using Line References
 -------------------
 
@@ -65,6 +94,11 @@ Middle section
 Conclusion
 ```
 
+Line references can also be used with inline file inclusion:
+```
+The most important part is @[document.txt:L42-45]
+```
+
 Example Use Cases
 ---------------
 
@@ -72,6 +106,7 @@ Example Use Cases
 2. Building tutorials that include code samples from actual files
 3. Assembling documentation with custom introductions and transitions
 4. Creating prompt templates with dynamic content from different sources
+5. Including quotes or references inline without disrupting paragraph flow
 
 Tips for Using Live Bundles
 -------------------------
@@ -80,6 +115,8 @@ Tips for Using Live Bundles
 - Use relative paths when possible for portability
 - Consider using line references to include only relevant parts of files
 - Test your live bundles to ensure file paths are correctly resolved
+- Use inline inclusion (@[file]) for short snippets that should flow within text
+- Use full-line inclusion for larger blocks of content
 
 Command Line Usage
 ----------------

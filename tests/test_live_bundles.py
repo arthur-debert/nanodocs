@@ -220,4 +220,73 @@ def test_real_world_example(tmpdir):
         "and the lambs are silent\n"
         "His fleece was white as snow, yeah"
     )
+    assert result == expected
+
+
+def test_inline_file_inclusion(tmpdir):
+    # Create test files
+    test_file1 = tmpdir.join("test_file1.txt")
+    test_file1.write(
+        "This is inline content with\nmultiple lines\nthat should be joined."
+    )
+    test_file2 = tmpdir.join("test_file2.txt")
+    test_file2.write("More inline content")
+    
+    # Create a mixed content bundle file with inline file references
+    bundle_file = tmpdir.join("inline_bundle.txt")
+    bundle_file.write(
+        f"Line 1 with @[{test_file1}] in the middle.\n"
+        f"Line 2 with @[{test_file2}] at the end.\n"
+        f"Line 3 with multiple references: @[{test_file1}] and @[{test_file2}]."
+    )
+    
+    # Process the bundle directly with process_mixed_content_bundle
+    with open(str(bundle_file), "r") as f:
+        lines = f.read().splitlines()
+    
+    result = process_mixed_content_bundle(lines)
+    
+    # Check that it returns the expected content with inline file inclusions
+    expected_inline1 = (
+        "This is inline content with multiple lines that should be joined."
+    )
+    expected_inline2 = "More inline content"
+    
+    assert f"Line 1 with {expected_inline1} in the middle." in result
+    assert f"Line 2 with {expected_inline2} at the end." in result
+    assert (f"Line 3 with multiple references: {expected_inline1} and "
+            f"{expected_inline2}.") in result
+    
+    # Make sure the original file paths are not in the result
+    assert f"@[{test_file1}]" not in result
+    assert f"@[{test_file2}]" not in result
+
+
+def test_real_world_inline_example(tmpdir):
+    # Create test files to simulate a real-world example
+    lamb_file = tmpdir.join("lamb.txt")
+    lamb_file.write("and the lambs are silent")
+    
+    quote_file = tmpdir.join("quote.txt")
+    quote_file.write("To be or not to be\nThat is the question")
+    
+    # Create a mixed content bundle file
+    bundle_file = tmpdir.join("mixed_inline.txt")
+    bundle_file.write(
+        f"Mary had a little lamb\n"
+        f"{lamb_file}\n"
+        f"His fleece was white as snow, yeah\n"
+        f"Shakespeare once wrote: @[{quote_file}]"
+    )
+    
+    # Test expanding the bundle
+    result = expand_bundles(str(bundle_file))
+    
+    # Check that it returns the expected content
+    expected = (
+        "Mary had a little lamb\n"
+        "and the lambs are silent\n"
+        "His fleece was white as snow, yeah\n"
+        "Shakespeare once wrote: To be or not to be That is the question"
+    )
     assert result == expected 
