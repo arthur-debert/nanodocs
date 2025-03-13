@@ -7,7 +7,7 @@ on:
   # Add manual trigger option
   workflow_dispatch:
     inputs:
-      publish_to:
+      targets:
         description: "Comma-separated list of targets (pypi,brew,apt)"
         required: false
         type: string
@@ -28,8 +28,6 @@ on:
         default: "build,verify,commit"
       release_notes:
         description: "Custom release notes content"
-        required: false
-        type: string
 
 permissions:
   contents: write
@@ -88,7 +86,7 @@ jobs:
           fi
           
           # Parse input targets
-          TARGETS="${{ github.event.inputs.publish_to }}"
+          TARGETS="${{ github.event.inputs.targets }}"
           if [[ -z "$TARGETS" ]]; then
             TARGETS="pypi,brew,apt"
           fi

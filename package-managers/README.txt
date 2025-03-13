@@ -28,7 +28,8 @@ Supports both local execution and GitHub Actions workflows.
    bin/new-release [options]
 
    Options:
-   --publish-to=<targets>  Comma-separated list of targets (pypi,brew,apt)
+   --target=<target>       Specify a target to publish to (can be used multiple times)
+                           Valid targets: pypi, apt, brew
    --local                 Run locally instead of using GitHub Actions
    --build                 Only build package manager manifests
    --verify                Only verify/test package manager manifests
@@ -36,13 +37,17 @@ Supports both local execution and GitHub Actions workflows.
    --force                 Force update even if no changes detected
    --version=<version>     Specify version (default: from pyproject.toml)
 
+   Examples:
+   bin/new-release --target=brew --target=apt --local
+   bin/new-release --target=pypi
+
    2.2 GitHub Workflow
 
    The unified workflow (package-release.yml) can be triggered manually or 
    automatically after a GitHub release is published.
 
    Workflow inputs:
-   - publish_to: Comma-separated list of targets (pypi,brew,apt)
+   - targets: Comma-separated list of targets (pypi,brew,apt)
    - force_update: Force update even if no changes detected
    - steps: Comma-separated list of steps (build,verify,commit)
    - package_name: Name of the package (default: project name)

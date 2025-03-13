@@ -11,8 +11,9 @@ Usage:
     new-release [options]
 
 Options:
-    --publish-to=<targets>  Comma-separated list of targets 
-                            (default: pypi,apt,brew)
+    --target=<target>       Specify a target to publish to 
+                            (can be used multiple times)
+                            Valid targets: pypi, apt, brew
     --local                 Run everything locally instead of using 
                             GitHub Actions
     --build                 Only build package manager manifests
@@ -37,10 +38,20 @@ def parse_args():
         epilog=__doc__.split("Usage:")[1]
     )
     
+    # Add --target argument (can be specified multiple times)
+    parser.add_argument(
+        "--target", 
+        action="append",
+        dest="targets",
+        choices=["pypi", "apt", "brew"],
+        help="Target to publish to (can be used multiple times)"
+    )
+    
+    # Keep --publish-to for backward compatibility
     parser.add_argument(
         "--publish-to", 
-        default="pypi,apt,brew",
-        help="Comma-separated list of targets (default: pypi,apt,brew)"
+        dest="publish_to",
+        help="[DEPRECATED] Use --target instead"
     )
     
     parser.add_argument(
@@ -330,8 +341,15 @@ def workflow_brew_update(package_name, steps=None, force=False):
 def main():
     args = parse_args()
     
-    # Parse targets
-    targets = args.publish_to.split(",")
+    # Process targets
+    targets = []
+    if args.targets:
+        targets = args.targets
+    elif args.publish_to:
+        targets = args.publish_to.split(",")
+    else:
+        # Default targets if none specified
+        targets = ["pypi", "apt", "brew"]
     
     # Get version
     version = args.version or get_version()
@@ -339,15 +357,15 @@ def main():
     
     # Determine which steps to run
     steps = []
-    if args.build or args.verify or args.commit:
-        if args.build:
-            steps.append("build")
-        if args.verify:
-            steps.append("verify")
-        if args.commit:
-            steps.append("commit")
-    else:
-        # Default: run all steps
+    if args.build:
+        steps.append("build")
+    if args.verify:
+        steps.append("verify")
+    if args.commit:
+        steps.append("commit")
+    
+    # If no steps specified, run all steps
+    if not steps:
         steps = ["build", "verify", "commit"]
     
     # Default package name
