@@ -14,11 +14,11 @@ if [[ "$1" == "--force" ]]; then
 fi
 
 echo "Updating Homebrew package..."
-"$PROJECT_ROOT/package-managers/common/package-update" --non-interactive brew $FORCE_FLAG
+"$PROJECT_ROOT/package-managers/brew/update-brew-formula.sh" --non-interactive $FORCE_FLAG
 
 echo ""
 echo "Updating APT package..."
-"$PROJECT_ROOT/package-managers/common/package-update" --non-interactive apt $FORCE_FLAG
+"$PROJECT_ROOT/package-managers/debian/update-apt-package.sh" --non-interactive $FORCE_FLAG
 
 echo ""
 echo "Both package updates have been triggered."
