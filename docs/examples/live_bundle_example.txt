@@ -1,0 +1,19 @@
+# Example Live Bundle
+
+This is a demonstration of the live bundle feature in nanodoc.
+Below, we'll include the content of the specifying_files.txt document:
+
+../specifying_files.txt
+
+As you can see, the file content is seamlessly integrated into this document.
+We can also include specific sections of files using line references:
+
+../live_bundles.txt:L20-30
+
+This makes it easy to create composite documents that include content from
+multiple sources with your own commentary and transitions between sections.
+
+# Conclusion
+
+Live bundles are a powerful way to create dynamic documents that combine
+content from multiple files without the visual separation of traditional bundles. 

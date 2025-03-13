@@ -293,16 +293,117 @@ def expand_directory(directory, extensions=TXT_EXTENSIONS):
     return sorted(matches)
 
 
-def expand_bundles(bundle_file):
-    """Extract list of files from a bundle file.
+def is_file_path_line(line):
+    """Determine if a line contains only a file path that exists.
 
-    This function expands a bundle file into a list of file paths.
+    Args:
+        line (str): The line to check.
+
+    Returns:
+        bool: True if the line is a valid file path, False otherwise.
+    """
+    if not line:  # Handle empty strings explicitly
+        return False
+    
+    stripped_line = line.strip()
+    if not stripped_line:  # Handle whitespace-only strings
+        return False
+    
+    return (
+        not stripped_line.startswith("#")
+        and os.path.isfile(stripped_line)
+    )
+
+
+def is_mixed_content_bundle(lines):
+    """Determine if a bundle contains mixed content (text and file paths).
+
+    Args:
+        lines (list): List of lines from the bundle file.
+
+    Returns:
+        bool: True if the bundle contains mixed content, False otherwise.
+    """
+    has_file_path = False
+    has_non_path_line = False
+
+    for line in lines:
+        stripped_line = line.strip()
+        if not stripped_line or stripped_line.startswith("#"):
+            continue  # Skip empty lines and comments
+
+        if os.path.isfile(stripped_line):
+            has_file_path = True
+        else:
+            has_non_path_line = True
+
+        # If we found both types, we can return early
+        if has_file_path and has_non_path_line:
+            return True
+
+    # If we have only file paths, it's a traditional bundle
+    return False
+
+
+def process_mixed_content_bundle(lines):
+    """Process a mixed content bundle by replacing file paths with their content.
+
+    Args:
+        lines (list): List of lines from the bundle file.
+
+    Returns:
+        str: The processed content with file paths replaced by their content.
+    """
+    result = []
+    for line in lines:
+        stripped_line = line.strip()
+        if is_file_path_line(stripped_line):
+            # This is a file path - substitute with file content
+            try:
+                file_content = get_file_content(stripped_line)
+                result.append(file_content)
+            except Exception as e:
+                logger.warning(f"Error reading file {stripped_line}: {e}")
+                # Keep the original line if file can't be read
+                result.append(line)
+        else:
+            # Regular text line - keep as is
+            result.append(line)
+    return "\n".join(result)
+
+
+def process_traditional_bundle(lines):
+    """Process a traditional bundle (list of file paths).
+
+    Args:
+        lines (list): List of lines from the bundle file.
+
+    Returns:
+        list: A list of file paths.
+    """
+    return [
+        line.strip()
+        for line in lines
+        if line.strip() and not line.strip().startswith("#")
+    ]
+
+
+def expand_bundles(bundle_file):
+    """Extract list of files from a bundle file or process mixed content.
+
+    This function handles two types of bundle files:
+    1. Traditional bundles: Each line is a file path to include
+    2. Mixed content bundles: Text mixed with file paths, where paths are
+       replaced with file content
 
     Args:
         bundle_file (str): Path to the bundle file.
 
     Returns:
-        list: A list of file paths contained in the bundle (not validated).
+        list or str: 
+            - For traditional bundles: A list of file paths
+            - For mixed content bundles: A string with file paths replaced by
+              their content
 
     Raises:
         FileNotFoundError: If bundle file not found or contains no valid files.
@@ -323,32 +424,33 @@ def expand_bundles(bundle_file):
                 ranges = parse_line_reference(line_ref)
                 parts = convert_line_ranges_to_tuples(ranges)
                 content = get_file_content(file_path, parts=parts)
-                lines = [line.strip() for line in content.splitlines() if line.strip()]
+                lines = content.splitlines()
             except ValueError as e:
                 raise FileNotFoundError(
-                    "Invalid line reference in bundle file: " f"{str(e)}"
+                    f"Invalid line reference in bundle file: {str(e)}"
                 )
         else:
             # Read the entire file
             content = get_file_content(file_path)
-            lines = [line.strip() for line in content.splitlines() if line.strip()]
+            lines = content.splitlines()
     except FileNotFoundError:
         raise FileNotFoundError(f"Bundle file not found: {file_path}")
 
-    expanded_files = []
-    for line in [line for line in lines if line and not line.startswith("#")]:
-        expanded_files.append(line)
-
-    # Note: validation is now done separately
-
-    return expanded_files
+    # Check if this is a mixed content bundle
+    if is_mixed_content_bundle(lines):
+        # Process as mixed content bundle
+        return process_mixed_content_bundle(lines)
+    else:
+        # Process as traditional bundle (list of files)
+        return process_traditional_bundle(lines)
 
 
 def is_bundle_file(file_path):
     """Determine if a file is a bundle file by checking its contents.
 
-    A file is considered a bundle if its first non-empty, non-comment line
-    points to an existing file.
+    A file is considered a bundle if:
+    1. Its first non-empty, non-comment line points to an existing file, or
+    2. It contains at least one line that is a valid file path
 
     Args:
         file_path (str): The path to the file to check.
@@ -359,26 +461,73 @@ def is_bundle_file(file_path):
     logger.debug(f"Checking if {file_path} is a bundle file")
     try:
         with open(file_path, "r") as f:
-            # Check the first few non-empty lines
-            for _ in range(5):  # Check up to 5 lines
-                line = f.readline().strip()
-                if not line:
+            lines = f.readlines()
+            
+            # First check: traditional bundle detection
+            for line in lines:
+                line = line.strip()
+                if not line or line.startswith("#"):
                     continue
-                if line.startswith("#"):  # Skip comment lines
-                    continue
-                # If this line exists as a file, assume it's a bundle file
                 if os.path.isfile(line):
                     return True
                 else:
-                    # Not a bundle file if a line is not a valid file
-                    return False
-            # Not a bundle file if none of the first 5 lines are valid files
-            return False
+                    # If we find a non-file line, check for mixed content
+                    break
+            
+            # Second check: mixed content bundle detection
+            has_file_path = False
+            for line in lines:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if os.path.isfile(line):
+                    has_file_path = True
+                    break
+            
+            return has_file_path
     except FileNotFoundError:
         return False
     except Exception as e:
         logger.error(f"Error checking bundle file: {e}")
         return False
+
+
+def expand_single_arg(arg, extensions=None):
+    """Helper function to expand a single argument.
+
+    Args:
+        arg (str): The argument to expand.
+        extensions (list, optional): List of file extensions to include when
+                                    expanding directories.
+
+    Returns:
+        list: A list of expanded file paths.
+    """
+    logger.debug(f"Expanding argument: {arg}")
+
+    # Extract file path if there's a line reference
+    file_path = arg
+    if ":L" in arg:
+        file_path = arg.split(":L", 1)[0]
+
+    if os.path.isdir(arg):  # Directory path
+        return expand_directory(arg, extensions=extensions)
+    elif is_bundle_file(file_path):  # Bundle file
+        bundle_result = expand_bundles(arg)
+        if isinstance(bundle_result, str):
+            # This is a mixed content bundle - create a temporary file
+            import tempfile
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".txt"
+            ) as temp:
+                temp.write(bundle_result)
+                temp_name = temp.name
+            return [temp_name]
+        else:
+            # Traditional bundle - list of files
+            return bundle_result
+    else:
+        return [arg]  # Regular file path
 
 
 def expand_args(args, extensions=None):
@@ -402,24 +551,8 @@ def expand_args(args, extensions=None):
     if extensions is None:
         extensions = TXT_EXTENSIONS
 
-    def expand_single_arg(arg):
-        """Helper function to expand a single argument."""
-        logger.debug(f"Expanding argument: {arg}")
-
-        # Extract file path if there's a line reference
-        file_path = arg
-        if ":L" in arg:
-            file_path = arg.split(":L", 1)[0]
-
-        if os.path.isdir(arg):  # Directory path
-            return expand_directory(arg, extensions=extensions)
-        elif is_bundle_file(file_path):  # Bundle file
-            return expand_bundles(arg)
-        else:
-            return [arg]  # Regular file path
-
     # Use list comprehension with sum to flatten the list of lists
-    return sum([expand_single_arg(arg) for arg in args], [])
+    return sum([expand_single_arg(arg, extensions) for arg in args], [])
 
 
 def verify_path(path):

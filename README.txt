@@ -36,6 +36,7 @@ $ nanodoc <file-1>...<file-n> # individual files
 $ nanodoc <dir-name> # all txt and md files in the dir will be included
 $ nanodoc <dir-name> <file-1> # mix and match as yould like
 $ nanodoc <bundle> # any .bundle.* file that is a list of paths, one per line
+$ nanodoc <live-bundle> # a file that mixes text and file paths, where paths are replaced with their content
 
 Get only parts of a file:
 
