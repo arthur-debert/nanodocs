@@ -12,6 +12,9 @@ from nanodoc.data import ContentItem, LineRange
 from nanodoc.data import get_content as get_item_content
 from nanodoc.data import validate_content_item
 
+# Define text file extensions
+TXT_EXTENSIONS = [".txt", ".md"]
+
 logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
 
@@ -266,7 +269,7 @@ def get_file_content(file_path, line=None, start=None, end=None, parts=None):
     return "".join(lines)
 
 
-def expand_directory(directory, extensions=[".txt", ".md"]):
+def expand_directory(directory, extensions=TXT_EXTENSIONS):
     """Find all files in a directory with specified extensions.
 
     This function expands a directory path into a list of file paths.
@@ -378,7 +381,7 @@ def is_bundle_file(file_path):
         return False
 
 
-def expand_args(args):
+def expand_args(args, extensions=None):
     """Expand a list of arguments into a flattened list of file paths.
 
     This function expands a list of arguments (file paths, directory paths, or
@@ -387,11 +390,17 @@ def expand_args(args):
 
     Args:
         args (list): A list of file paths, directory paths, or bundle files.
+        extensions (list, optional): List of file extensions to include when
+                                    expanding directories. Defaults to TXT_EXTENSIONS.
 
     Returns:
         list: A flattened list of file paths (not validated).
     """
     logger.debug(f"Expanding arguments: {args}")
+    
+    # Use default extensions if none provided
+    if extensions is None:
+        extensions = TXT_EXTENSIONS
 
     def expand_single_arg(arg):
         """Helper function to expand a single argument."""
@@ -403,7 +412,7 @@ def expand_args(args):
             file_path = arg.split(":L", 1)[0]
 
         if os.path.isdir(arg):  # Directory path
-            return expand_directory(arg)
+            return expand_directory(arg, extensions=extensions)
         elif is_bundle_file(file_path):  # Bundle file
             return expand_bundles(arg)
         else:
@@ -487,15 +496,17 @@ def file_sort_key(path):
     base_name = os.path.splitext(os.path.basename(path))[0]
     ext = os.path.splitext(path)[1]
     # This ensures test_file.txt comes before test_file.md
-    ext_priority = 0 if ext == ".txt" else 1 if ext == ".md" else 2
+    ext_priority = 0 if ext == TXT_EXTENSIONS[0] else 1 if ext == TXT_EXTENSIONS[1] else 2
     return (base_name, ext_priority)
 
 
-def get_files_from_args(srcs):
+def get_files_from_args(srcs, extensions=None):
     """Process the sources and return a list of ContentItems.
 
     Args:
         srcs (list): List of source file paths, directories, or bundle files.
+        extensions (list, optional): List of file extensions to include when
+                                    expanding directories. Defaults to TXT_EXTENSIONS.
 
     Returns:
         list: A list of ContentItem objects.
@@ -506,8 +517,12 @@ def get_files_from_args(srcs):
         IsADirectoryError: If a path is a directory, not a file.
         ValueError: If a line reference is invalid or out of range.
     """
+    # Use default extensions if none provided
+    if extensions is None:
+        extensions = TXT_EXTENSIONS
+
     # Phase 1: Expand all arguments into a flat list of file paths
-    expanded_files = expand_args(srcs)
+    expanded_files = expand_args(srcs, extensions=extensions)
     if not expanded_files:
         return []
 

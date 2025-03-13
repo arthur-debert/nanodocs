@@ -106,13 +106,13 @@ import sys
 try:
     # Try relative imports first (when used as a package)
     from .core import process_all
-    from .files import get_files_from_args
+    from .files import get_files_from_args, TXT_EXTENSIONS
 except ImportError:
     # Fall back to absolute imports (when run as a script)
     # Add parent directory to path to make nanodoc a package
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from nanodoc.core import process_all
-    from nanodoc.files import get_files_from_args
+    from nanodoc.files import get_files_from_args, TXT_EXTENSIONS
 
 
 # Version and configuration constants
@@ -205,6 +205,13 @@ def parse_args():
         help="Header style: nice (default, formatted title), filename (just filename), "
         "or path (full path)",
     )
+    
+    parser.add_argument(
+        "--txt-ext",
+        action="append",
+        help="Add additional file extensions to search for (can be used multiple times)",
+        metavar="EXT",
+    )
 
     parser.add_argument("sources", nargs="*", help="Source file(s)")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
@@ -256,8 +263,24 @@ def main():
         # Set up logging based on verbose flag
         setup_logging(to_stderr=True, enabled=args.v)
 
+        # Process additional file extensions if provided
+        extensions = list(TXT_EXTENSIONS)  # Create a copy of the default extensions
+        if args.txt_ext:
+            for ext in args.txt_ext:
+                # Add a leading dot if not present
+                if not ext.startswith('.'):
+                    ext = '.' + ext
+                # Only add if not already in the list
+                if ext not in extensions:
+                    extensions.append(ext)
+
         # Get verified content items from arguments
-        content_items = get_files_from_args(args.sources)
+        if args.txt_ext:
+            # Only pass extensions if custom extensions were provided
+            content_items = get_files_from_args(args.sources, extensions=extensions)
+        else:
+            # Use default extensions
+            content_items = get_files_from_args(args.sources)
 
         # Process the files and print the result
         if not content_items:
