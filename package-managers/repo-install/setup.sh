@@ -32,6 +32,15 @@ else
   echo "- Poetry"
 fi
 
+# Install Python dependencies
+echo "Installing Python dependencies..."
+if command -v pip &>/dev/null; then
+  pip install -r "$SCRIPT_DIR/requirements.txt"
+else
+  echo "Warning: pip not found. Please install the following Python dependencies manually:"
+  cat "$SCRIPT_DIR/requirements.txt"
+fi
+
 # Create the new-release script in bin
 echo "Creating bin/new-release script..."
 cp "$SCRIPT_DIR/new-release" "$REPO_ROOT/bin/new-release"
