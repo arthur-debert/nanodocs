@@ -54,6 +54,21 @@ else
   exit 1
 fi
 
+# Remove old workflow files that are now replaced by the unified workflow
+echo "Removing deprecated workflow files..."
+OLD_WORKFLOWS=(
+  "$REPO_ROOT/.github/workflows/update-homebrew-formula.yml"
+  "$REPO_ROOT/.github/workflows/update-apt-package.yml"
+  "$REPO_ROOT/.github/workflows/pypi-publish.yml"
+)
+
+for workflow in "${OLD_WORKFLOWS[@]}"; do
+  if [ -f "$workflow" ]; then
+    echo "Removing $workflow..."
+    rm "$workflow"
+  fi
+done
+
 # Make all scripts executable
 echo "Making scripts executable..."
 find "$PACKAGE_MANAGERS_DIR" -type f \( -name "*.py" -o -name "*.sh" \) -print0 | xargs -0 chmod +x
