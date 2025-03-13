@@ -1,8 +1,8 @@
 class Nanodoc < Formula
   desc "A minimalist document bundler designed for stitching hints, reminders and short docs."
   homepage "https://github.com/arthur-debert/nanodoc/"
-  url "https://files.pythonhosted.org/packages/source/n/nanodoc/nanodoc-0.3.1.tar.gz"
-  sha256 "5e76c12170dfdc4e3363cda0bdf32b104252ebec7c5a17fe8488f532304e6335"
+  url "https://files.pythonhosted.org/packages/source/n/nanodoc/nanodoc-0.6.2.tar.gz"
+  sha256 "cf72b546980cd7dce1291aecd0f3ce400e4bc3b6b3cfc72e053563ad9f9b0674"
   license "MIT"
 
   depends_on "python@3"
