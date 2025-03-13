@@ -12,6 +12,9 @@ from nanodoc.data import ContentItem, LineRange
 from nanodoc.data import get_content as get_item_content
 from nanodoc.data import validate_content_item
 
+# Define text file extensions
+TXT_EXTENSIONS = [".txt", ".md"]
+
 logger = logging.getLogger("nanodoc")
 logger.setLevel(logging.CRITICAL)  # Start with logging disabled
 
@@ -266,7 +269,7 @@ def get_file_content(file_path, line=None, start=None, end=None, parts=None):
     return "".join(lines)
 
 
-def expand_directory(directory, extensions=[".txt", ".md"]):
+def expand_directory(directory, extensions=TXT_EXTENSIONS):
     """Find all files in a directory with specified extensions.
 
     This function expands a directory path into a list of file paths.
@@ -487,7 +490,7 @@ def file_sort_key(path):
     base_name = os.path.splitext(os.path.basename(path))[0]
     ext = os.path.splitext(path)[1]
     # This ensures test_file.txt comes before test_file.md
-    ext_priority = 0 if ext == ".txt" else 1 if ext == ".md" else 2
+    ext_priority = 0 if ext == TXT_EXTENSIONS[0] else 1 if ext == TXT_EXTENSIONS[1] else 2
     return (base_name, ext_priority)
 
 
