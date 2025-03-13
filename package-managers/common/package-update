@@ -3,6 +3,33 @@
 
 set -e
 
+# Default values
+NON_INTERACTIVE=false
+PACKAGE_SYSTEM=""
+FORCE_UPDATE_FLAG="false"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --non-interactive)
+    NON_INTERACTIVE=true
+    shift
+    ;;
+  --force)
+    FORCE_UPDATE_FLAG="true"
+    shift
+    ;;
+  brew | apt)
+    PACKAGE_SYSTEM="$1"
+    shift
+    ;;
+  *)
+    # Unknown option
+    shift
+    ;;
+  esac
+done
+
 # Ensure we're in the project root
 cd "$(dirname "$0")/.."
 
@@ -36,13 +63,19 @@ fi
 # Check if the current branch exists in the remote repository
 if ! git ls-remote --heads origin ${CURRENT_BRANCH} | grep -q ${CURRENT_BRANCH}; then
   echo "Warning: Branch '${CURRENT_BRANCH}' does not exist in the remote repository."
-  echo "Options:"
-  echo "1. Use default branch '${DEFAULT_BRANCH}' instead"
-  echo "2. Push current branch to remote and continue"
-  echo "3. Cancel"
-  read -r -p "Choose an option (1-3): " BRANCH_OPTION
 
-  case ${BRANCH_OPTION} in
+  if [[ ${NON_INTERACTIVE} == true ]]; then
+    # In non-interactive mode, use default branch
+    echo "Using default branch '${DEFAULT_BRANCH}' instead."
+    BRANCH_TO_USE=${DEFAULT_BRANCH}
+  else
+    echo "Options:"
+    echo "1. Use default branch '${DEFAULT_BRANCH}' instead"
+    echo "2. Push current branch to remote and continue"
+    echo "3. Cancel"
+    read -r -p "Choose an option (1-3): " BRANCH_OPTION
+
+    case ${BRANCH_OPTION} in
     1)
       echo "Using default branch '${DEFAULT_BRANCH}' instead."
       BRANCH_TO_USE=${DEFAULT_BRANCH}
@@ -56,7 +89,8 @@ if ! git ls-remote --heads origin ${CURRENT_BRANCH} | grep -q ${CURRENT_BRANCH};
       echo "Update cancelled."
       exit 0
       ;;
-  esac
+    esac
+  fi
 else
   BRANCH_TO_USE=${CURRENT_BRANCH}
 fi
@@ -71,21 +105,18 @@ fi
 # Default package name
 PACKAGE_NAME="nanodoc"
 
-# Determine which package system to update (allow environment variable for testing)
-if [[ -n ${PACKAGE_SYSTEM} ]]; then
-  # Use the environment variable if set
-  :
-elif [[ $1 == "brew" ]]; then
-  PACKAGE_SYSTEM="brew"
-elif [[ $1 == "apt" ]]; then
-  PACKAGE_SYSTEM="apt"
-else
-  echo "Which package system would you like to update?"
-  echo "1. Homebrew (brew)"
-  echo "2. Debian/Ubuntu (apt)"
-  read -r -p "Choose an option (1-2): " PACKAGE_OPTION
+# Determine which package system to update
+if [[ -z ${PACKAGE_SYSTEM} ]]; then
+  if [[ ${NON_INTERACTIVE} == true ]]; then
+    echo "Error: Package system (brew or apt) must be specified in non-interactive mode."
+    exit 1
+  else
+    echo "Which package system would you like to update?"
+    echo "1. Homebrew (brew)"
+    echo "2. Debian/Ubuntu (apt)"
+    read -r -p "Choose an option (1-2): " PACKAGE_OPTION
 
-  case ${PACKAGE_OPTION} in
+    case ${PACKAGE_OPTION} in
     1)
       PACKAGE_SYSTEM="brew"
       ;;
@@ -96,7 +127,8 @@ else
       echo "Invalid option. Exiting."
       exit 1
       ;;
-  esac
+    esac
+  fi
 fi
 
 # Set workflow name based on package system
@@ -111,18 +143,20 @@ fi
 echo "Current version: ${VERSION}"
 echo "Branch to use: ${BRANCH_TO_USE}"
 echo "This will trigger a ${PACKAGE_TYPE} update for ${PACKAGE_NAME} version ${VERSION} from branch ${BRANCH_TO_USE}."
-read -r -p "Continue? (y/n): " CONFIRM
 
-if [[ ${CONFIRM} != "y" && ${CONFIRM} != "Y" ]]; then
-  echo "Update cancelled."
-  exit 0
-fi
+if [[ ${NON_INTERACTIVE} == false ]]; then
+  read -r -p "Continue? (y/n): " CONFIRM
 
-# Ask if user wants to force update
-read -r -p "Force update even if no changes detected? (y/n): " FORCE_UPDATE
-FORCE_UPDATE_FLAG="false"
-if [[ ${FORCE_UPDATE} == "y" || ${FORCE_UPDATE} == "Y" ]]; then
-  FORCE_UPDATE_FLAG="true"
+  if [[ ${CONFIRM} != "y" && ${CONFIRM} != "Y" ]]; then
+    echo "Update cancelled."
+    exit 0
+  fi
+
+  # Ask if user wants to force update
+  read -r -p "Force update even if no changes detected? (y/n): " FORCE_UPDATE
+  if [[ ${FORCE_UPDATE} == "y" || ${FORCE_UPDATE} == "Y" ]]; then
+    FORCE_UPDATE_FLAG="true"
+  fi
 fi
 
 # Trigger the workflow
@@ -130,23 +164,25 @@ echo "Triggering ${PACKAGE_TYPE} update workflow..."
 gh workflow run "${WORKFLOW_NAME}" --ref "${BRANCH_TO_USE}" --field force_update=${FORCE_UPDATE_FLAG} --field package_name=${PACKAGE_NAME}
 echo ""
 
-# Wait a moment for the workflow to be registered
-echo "Waiting for workflow to start..."
-sleep 2
+if [[ ${NON_INTERACTIVE} == false ]]; then
+  # Wait a moment for the workflow to be registered
+  echo "Waiting for workflow to start..."
+  sleep 2
 
-# Get the run ID of the latest workflow
-RUN_ID=$(gh run list --workflow="${WORKFLOW_NAME}" --limit 1 --json databaseId --jq '.[0].databaseId')
+  # Get the run ID of the latest workflow
+  RUN_ID=$(gh run list --workflow="${WORKFLOW_NAME}" --limit 1 --json databaseId --jq '.[0].databaseId')
 
-# Display the status of the workflow run
-echo "Latest workflow run status:"
-echo ""
-gh run list --workflow="${WORKFLOW_NAME}" --limit 1
-
-if [[ -n ${RUN_ID} ]]; then
+  # Display the status of the workflow run
+  echo "Latest workflow run status:"
   echo ""
-  echo "You can check the detailed status with:"
-  echo "gh run view ${RUN_ID} (after this script completes)"
-  echo ""
-  echo "Watching workflow progress in real-time..."
-  gh run watch "${RUN_ID}"
+  gh run list --workflow="${WORKFLOW_NAME}" --limit 1
+
+  if [[ -n ${RUN_ID} ]]; then
+    echo ""
+    echo "You can check the detailed status with:"
+    echo "gh run view ${RUN_ID} (after this script completes)"
+    echo ""
+    echo "Watching workflow progress in real-time..."
+    gh run watch "${RUN_ID}"
+  fi
 fi

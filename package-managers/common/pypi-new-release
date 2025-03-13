@@ -3,6 +3,23 @@
 
 set -e
 
+# Default values
+RELEASE_NOTES_FILE=""
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --release-notes)
+    RELEASE_NOTES_FILE="$2"
+    shift 2
+    ;;
+  *)
+    # Unknown option
+    shift
+    ;;
+  esac
+done
+
 # Ensure we're in the project root
 cd "$(dirname "$0")/.."
 
@@ -18,6 +35,21 @@ if ! gh auth status &>/dev/null; then
   echo "Error: You are not authenticated with GitHub CLI."
   echo "Please run 'gh auth login' first."
   exit 1
+fi
+
+# Validate release notes file if provided
+if [[ -n "${RELEASE_NOTES_FILE}" ]]; then
+  if [[ ! -f "${RELEASE_NOTES_FILE}" ]]; then
+    echo "Error: Release notes file '${RELEASE_NOTES_FILE}' does not exist."
+    exit 1
+  fi
+
+  if [[ ! -r "${RELEASE_NOTES_FILE}" ]]; then
+    echo "Error: Release notes file '${RELEASE_NOTES_FILE}' is not readable."
+    exit 1
+  fi
+
+  echo "Using release notes from: ${RELEASE_NOTES_FILE}"
 fi
 
 # Get the current branch
@@ -44,9 +76,21 @@ if [[ ${CONFIRM} != "y" && ${CONFIRM} != "Y" ]]; then
   exit 0
 fi
 
+# Prepare workflow inputs
+WORKFLOW_INPUTS=""
+if [[ -n "${RELEASE_NOTES_FILE}" ]]; then
+  # Read the release notes file content and escape it for JSON
+  RELEASE_NOTES_CONTENT=$(cat "${RELEASE_NOTES_FILE}" | jq -Rs .)
+  WORKFLOW_INPUTS="release_notes=${RELEASE_NOTES_CONTENT}"
+fi
+
 # Trigger the workflow
 echo "Triggering PyPI publish workflow..."
-gh workflow run "Publish to PyPI" --ref "${CURRENT_BRANCH}"
+if [[ -n "${WORKFLOW_INPUTS}" ]]; then
+  gh workflow run "Publish to PyPI" --ref "${CURRENT_BRANCH}" --raw-field "${WORKFLOW_INPUTS}"
+else
+  gh workflow run "Publish to PyPI" --ref "${CURRENT_BRANCH}"
+fi
 echo ""
 
 # Wait a moment for the workflow to be registered

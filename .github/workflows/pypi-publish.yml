@@ -1,8 +1,13 @@
 name: Publish to PyPI
 
 on:
-  # Simple workflow dispatch without inputs
+  # Workflow dispatch with inputs
   workflow_dispatch:
+    inputs:
+      release_notes:
+        description: "Custom release notes content"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -55,10 +60,10 @@ jobs:
           files: dist/*
           tag_name: v${{ steps.determine_version.outputs.release_version }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          generate_release_notes: true
+          generate_release_notes: ${{ inputs.release_notes == '' }}
+          body: ${{ inputs.release_notes }}
           prerelease: false
-          name:
-            "Release v${{ steps.determine_version.outputs.release_version }}"
+          name: "Release v${{ steps.determine_version.outputs.release_version }}"
 
       # Only trigger if UPDATES_HOMEBREW repository variable is set
       - name: Trigger Homebrew Formula Update
