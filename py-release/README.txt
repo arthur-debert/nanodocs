@@ -14,102 +14,104 @@ Supports both local execution and GitHub Actions workflows.
    1.2 Run the setup script:
        ./py-release/setup # will install dependencies if not available [deps]
 
-2. USAGE
+2. CONCEPTS
 
-2.1 The new-release command. By default it will publish to all targets using GitHub Actions.
+2.1 Release Targets
+    There are two distinct target types:
+    - Push targets (github, pypi): We push releases to external services
+    - Pull targets (apt, brew): We maintain package definitions in our repo
 
-    py-release/new-release
+2.2 Release Steps
+    Each target follows these steps in sequence:
+    
+    build  → Generate required artifacts
+            - PyPI: Build distribution files
+            - GitHub: Prepare release notes and assets
+            - APT: Generate debian package
+            - Brew: Generate formula file
+    
+    check  → Test locally before publishing
+            - PyPI: Install from local dist
+            - GitHub: Validate release assets
+            - APT: Install local package
+            - Brew: Install local formula
+    
+    publish→ Make changes available
+            - PyPI: Upload to PyPI
+            - GitHub: Create release
+            - APT: Commit package to repo
+            - Brew: Commit formula to repo
+    
+    verify → Test as end user
+            - PyPI: Install from PyPI
+            - GitHub: Check release via API
+            - APT: Install via apt
+            - Brew: Install via brew
 
-Options:
+3. USAGE
 
-    --target=<target>       Specify a target to publish to (can be used multiple times)
-                            Valid targets: pypi, apt, brew, github
-    --local                 Run locally instead of using GitHub Actions
-    --build                 Only build package manager manifests
-    --verify                Only verify/test package manager manifests
-    --commit                Only commit package manager manifests
-    --force                 Force update even if no changes detected
-    --version=<version>     Specify version (default: from pyproject.toml)
-    --package-name=<name>   Specify package name (default: from pyproject.toml
-                        or PACKAGE_NAME environment variable)
+3.1 The new-release command
+    By default runs all steps for all targets using GitHub Actions:
+    
+    ./py-release/new-release
 
-Examples:
+    Options:
+    --target=<target>     Specify target (pypi,apt,brew,github)
+    --local              Run locally instead of GitHub Actions
+    --build             Run until build step
+    --check             Run until check step
+    --publish           Run until publish step
+    --verify            Run all steps (default)
+    --force             Force update even if no changes
+    --version=<ver>     Override version
+    --package-name=<n>  Override package name
 
-    py-release/new-release --target=brew --target=apt --local
-    py-release/new-release --target=pypi --target=github
-    py-release/new-release --target=github --local
-    py-release/new-release --target=brew --package-name=my package --local
+    Examples:
+    ./py-release/new-release --target=brew --check --local
+    ./py-release/new-release --target=pypi --publish
+    PACKAGE_NAME=foo ./py-release/new-release --target=apt
 
-You can also set the package name using an environment variable:
-PACKAGE_NAME=my-package py-release/new-release --target=brew --local
+3.2 Direct Target Scripts
+    Each target has individual scripts for each step:
+    
+    ./py-release/pypi/build   # Build PyPI package
+    ./py-release/apt/check    # Test APT package
+    ./py-release/brew/publish # Commit Brew formula
+    ./py-release/github/verify# Verify GitHub release
 
-2.2 GitHub Workflow
-
-The unified workflow (package-release.yml) can be triggered manually or
-automatically after a GitHub release is published.
-
-Workflow inputs:
-- targets: Comma-separated list of targets (pypi,brew,apt,github)
-- force_update: Force update even if no changes detected
-- steps: Comma-separated list of steps (build,verify,commit)
-- package_name: Name of the package (default: project name)
-- release_notes: Custom release notes content
-
-3. DIRECTORY STRUCTURE
-
-   After setup, your repository will have the following structure:
+4. DIRECTORY STRUCTURE
 
    your-repo/
-   ├── .github/workflows/
-   │   └── package-release.yml        # Unified workflow file
    └── py-release/
-       ├── Brewfile                   # Homebrew dependencies
-       ├── new-release               # Main release script
-       ├── package-release.yml       # Template workflow file
-       ├── requirements.txt          # Python dependencies
-       ├── setup                     # Setup script
-       ├── brew/                     # Homebrew-related files
-       │   ├── Formula/
-       │   │   └── <package_name>.rb
-       │   ├── pypi-to-brew          # Generate Homebrew formula
-       │   └── test-brew-formula.sh  # Test Homebrew formula
-       ├── common/                   # Shared scripts
-       │   └── new-release.py        # Main release script implementation
-       └── debian/                   # Debian/APT-related files
-           ├── pypi-to-apt           # Generate APT package
-           └── test-apt-package.sh   # Test APT package
+       ├── new-release       # Main entry point
+       ├── setup            # Setup script
+       ├── lib/             # Shared utilities
+       ├── pypi/            # PyPI release scripts
+       │   ├── build       # Build distribution
+       │   ├── check       # Test local install
+       │   ├── publish     # Upload to PyPI
+       │   ├── verify      # Test PyPI install
+       │   └── lib/        # PyPI-specific utilities
+       ├── github/          # GitHub release scripts
+       │   ├── build       # Prepare release
+       │   ├── check       # Validate assets
+       │   ├── publish     # Create release
+       │   ├── verify      # Verify via API
+       │   └── lib/        # GitHub-specific utilities
+       ├── apt/             # APT package scripts
+       │   ├── build       # Generate package
+       │   ├── check       # Test local install
+       │   ├── publish     # Commit to repo
+       │   ├── verify      # Test apt install
+       │   └── lib/        # APT-specific utilities
+       └── brew/            # Homebrew scripts
+           ├── build       # Generate formula
+           ├── check       # Test local install
+           ├── publish     # Commit to repo
+           ├── verify      # Test brew install
+           └── lib/        # Homebrew-specific utilities
 
-4. PACKAGE-SPECIFIC INFORMATION
-
-   4.1 Debian/APT Packages
-
-   Debian packages are generated from PyPI packages and stored in:
-   py-release/debian/<package_name>-<version>/
-
-   To install a generated package manually:
-   sudo apt install ./python3-<package_name>_<version>-1_all.deb
-
-   Note: When generating a new Debian package, old package directories for
-   previous versions are automatically cleaned up to prevent repository clutter.
-
-   4.2 Homebrew Formulas
-
-   Homebrew formulas are generated from PyPI packages and stored in:
-   py-release/brew/Formula/<package_name>.rb
-
-   To install a generated formula manually:
-   brew install --formula ./py-release/brew/Formula/<package_name>.rb
-
-5. WHAT THE SETUP SCRIPT DOES
-
-   The setup script performs the following actions:
-   - Creates necessary directories (.github/workflows, etc.)
-   - Installs dependencies using Homebrew (if available)
-   - Installs Python dependencies from requirements.txt
-   - Sets up the GitHub workflow file
-   - Makes all scripts executable
-
-[deps]
+5. DEPENDENCIES [deps]
     - Python 3.7+
     - Poetry
     - GitHub CLI (gh)

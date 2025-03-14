@@ -1,0 +1,53 @@
+QA Status Table for py-release v0.8.7
+====================================
+
+Target | Environment | Step    | Status | Notes
+-------|-------------|---------|---------|-------
+PyPI   | Local       | Build   | ✅      | Successfully built dist files
+PyPI   | Local       | Publish | ⏳      | Not tested yet
+PyPI   | Local       | Verify  | ⏳      | Check PyPI package listing
+PyPI   | GitHub      | Build   | ⏳      | Not tested yet
+PyPI   | GitHub      | Publish | ⏳      | Not tested yet
+PyPI   | GitHub      | Verify  | ⏳      | Check PyPI package listing
+
+Homebrew| Local       | Build   | ❌      | Failed - needs PyPI publish first
+Homebrew| Local       | Commit  | ⏳      | Generate formula file
+Homebrew| Local       | Verify  | ⏳      | Test brew install from local formula
+Homebrew| GitHub      | Build   | ⏳      | Not tested yet
+Homebrew| GitHub      | Commit  | ⏳      | Not tested yet
+Homebrew| GitHub      | Verify  | ⏳      | Test brew install from PR
+
+APT     | Local       | Build   | ❌      | Failed - dpkg-deb not available on macOS
+APT     | Local       | Commit  | ⏳      | Generate debian package files
+APT     | Local       | Verify  | ⏳      | Test apt install from local deb
+APT     | GitHub      | Build   | ⏳      | Not tested yet
+APT     | GitHub      | Commit  | ⏳      | Not tested yet
+APT     | GitHub      | Verify  | ⏳      | Test apt install from PR
+
+GitHub  | Local       | Build   | ⏳      | Not tested yet
+GitHub  | Local       | Publish | ⏳      | Create GitHub release
+GitHub  | Local       | Verify  | ⏳      | Check GitHub releases page
+GitHub  | GitHub      | Build   | ⏳      | Not tested yet
+GitHub  | GitHub      | Publish | ⏳      | Not tested yet
+GitHub  | GitHub      | Verify  | ⏳      | Check GitHub releases page
+
+Legend:
+✅ - Successfully tested
+❌ - Failed
+⏳ - Not tested yet
+
+Target Types:
+1. Push Targets (PyPI, GitHub):
+   - Build: Create distribution files
+   - Publish: Upload to external service
+   - Verify: Check external service listing
+
+2. Pull Targets (Homebrew, APT):
+   - Build: Generate package files
+   - Commit: Save package files to repo
+   - Verify: Test installation from local files
+
+Current Issues:
+1. APT builds require Linux environment (dpkg-deb)
+2. Homebrew formula generation requires PyPI publish first
+3. Need to verify GitHub CLI installation for GitHub releases
