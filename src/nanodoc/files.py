@@ -9,9 +9,9 @@ import os
 from typing import List, Tuple
 import re
 
-from nanodoc.data import ContentItem, LineRange
-from nanodoc.data import get_content as get_item_content
-from nanodoc.data import validate_content_item
+from .data import ContentItem, LineRange
+from .data import get_content as get_item_content
+from .data import validate_content_item
 
 # Define text file extensions
 TXT_EXTENSIONS = [".txt", ".md"]

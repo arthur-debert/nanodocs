@@ -1,4 +1,4 @@
 #! /usr/bin/env bash
 
 ## Run the nanodoc module using Python
-python3 -m nanodoc "$@"
+python3 -m src.nanodoc "$@"

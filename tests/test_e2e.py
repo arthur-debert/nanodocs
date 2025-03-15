@@ -16,7 +16,7 @@ SAMPLE_FILES = [
 
 # Use Python module approach instead of direct script execution
 PYTHON_CMD = sys.executable
-NANODOC_MODULE = "nanodoc"
+NANODOC_MODULE = "src.nanodoc"
 
 
 def test_e2e_with_nn_and_toc():

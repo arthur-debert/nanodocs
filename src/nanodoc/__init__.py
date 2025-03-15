@@ -3,6 +3,6 @@
 nanodoc is an ultra-lightweight documentation generator.
 """
 
-from nanodoc.version import VERSION
+from .version import VERSION
 
 __version__ = VERSION

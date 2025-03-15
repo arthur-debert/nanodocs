@@ -100,9 +100,9 @@ import argparse
 import logging
 import sys
 
-from nanodoc.core import process_all
-from nanodoc.files import get_files_from_args, TXT_EXTENSIONS
-from nanodoc.version import VERSION
+from .core import process_all
+from .files import get_files_from_args, TXT_EXTENSIONS
+from .version import VERSION
 
 LINE_WIDTH = 80
 
