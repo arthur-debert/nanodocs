@@ -6,7 +6,7 @@ import nanodoc
 
 # Use Python module approach for running nanodoc
 PYTHON_CMD = sys.executable
-NANODOC_MODULE = "nanodoc"
+NANODOC_MODULE = "src.nanodoc"
 
 
 def test_version_import():
